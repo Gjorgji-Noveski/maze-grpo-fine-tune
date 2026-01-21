@@ -66,10 +66,15 @@ OUTPUT ONLY THE NECESSARY STEPS TO REACH THE GOAL. Use only: up, down, left, rig
 
 
 def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
-    """Reward function using path simulation through the maze."""
-    step_reward = 1.0
+    """Reward function using path simulation through the maze.
+
+    Key insight: We add distance-based shaping so the model gets gradient signal
+    even when it doesn't reach the goal. This prevents mode collapse by rewarding
+    outputs that get CLOSER to the goal, not just those that reach it.
+    """
+    step_reward = 0.5
     wall_penalty = -1.0
-    reached_end_reward = 15.0
+    reached_end_reward = 10.0
 
     directions = {
         'up': (-1, 0),
@@ -87,7 +92,7 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
         else:
             text = str(completion)
 
-        # Find start position (*)
+        # Find start and goal positions
         start_row, start_col = None, None
         goal_row, goal_col = None, None
         for r, row in enumerate(mat):
@@ -104,6 +109,9 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
         wall_hits = 0
         rows, cols = len(mat), len(mat[0])
 
+        # Calculate initial distance to goal (Manhattan)
+        initial_distance = abs(start_row - goal_row) + abs(start_col - goal_col)
+
         for direction in pred_dirs:
             if direction not in directions:
                 wall_hits += 1
@@ -117,15 +125,32 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
                 valid_steps += 1
                 if mat[new_row][new_col] == '#':
                     reached_end = True
-                    break  # Stop once goal is reached
+                    break
             else:
                 wall_hits += 1
 
-        # Penalize extra steps after reaching goal (remaining directions)
-        extra_steps = len(pred_dirs) - (valid_steps + wall_hits)
-        extra_penalty = -0.5 * extra_steps
+        # Calculate final distance to goal
+        final_distance = abs(current_row - goal_row) + abs(current_col - goal_col)
 
-        score = (valid_steps * step_reward) + (wall_hits * wall_penalty) + extra_penalty + (reached_end * reached_end_reward)
+        # Distance improvement reward: positive if we got closer, negative if further
+        # Scale by initial distance to normalize across different maze sizes
+        distance_improvement = initial_distance - final_distance
+        if initial_distance > 0:
+            distance_reward = 3.0 * (distance_improvement / initial_distance)
+        else:
+            distance_reward = 0.0
+
+        # Penalize extra tokens after simulation ends
+        extra_steps = len(pred_dirs) - (valid_steps + wall_hits)
+        extra_penalty = -0.3 * max(0, extra_steps)
+
+        score = (
+            (valid_steps * step_reward) +
+            (wall_hits * wall_penalty) +
+            extra_penalty +
+            distance_reward +
+            (reached_end_reward if reached_end else 0.0)
+        )
         rewards.append(float(score))
 
     return rewards
@@ -147,8 +172,53 @@ def score_answer(prompts, completions, answer, **kwargs) -> list[float]:
     return rewards
 
 
+def format_reward(prompts, completions, **kwargs) -> list[float]:
+    """Reward well-formed outputs that use valid direction tokens.
+
+    Encourages the model to at least produce syntactically valid outputs
+    rather than gibberish or overly short/long sequences.
+    """
+    valid_directions = {'up', 'down', 'left', 'right'}
+
+    rewards = []
+    for completion in completions:
+        if isinstance(completion, list):
+            text = completion[0].get('content', '') if completion else ''
+        else:
+            text = str(completion)
+
+        tokens = text.lower().strip().split()
+
+        if len(tokens) == 0:
+            rewards.append(-2.0)  # Penalize empty output
+            continue
+
+        # Count valid direction tokens
+        valid_count = sum(1 for t in tokens if t in valid_directions)
+        validity_ratio = valid_count / len(tokens)
+
+        # Reward high validity ratio
+        format_score = validity_ratio * 2.0 - 1.0  # Maps [0,1] to [-1,1]
+
+        # Penalize very short or very long outputs (expect 5-20 steps typically)
+        length_penalty = 0.0
+        if len(tokens) < 3:
+            length_penalty = -0.5 * (3 - len(tokens))
+        elif len(tokens) > 30:
+            length_penalty = -0.1 * (len(tokens) - 30)
+
+        rewards.append(format_score + length_penalty)
+
+    return rewards
+
+
 def diversity_reward(prompts, completions, **kwargs) -> list[float]:
-    """Reward unique completions, penalize identical ones to prevent mode collapse."""
+    """Reward unique completions, penalize identical ones to prevent mode collapse.
+
+    Uses random tiebreaking so identical completions get different rewards,
+    creating gradient signal even when all outputs collapse to the same text.
+    """
+    import random
     from collections import Counter
 
     texts = []
@@ -162,12 +232,29 @@ def diversity_reward(prompts, completions, **kwargs) -> list[float]:
     counts = Counter(texts)
     n = len(texts)
 
+    # Track how many of each duplicate we've seen for tiebreaking
+    seen_counts = {}
+
     rewards = []
     for text in texts:
         frequency = counts[text] / n
-        # unique (1/n) → +1.0, all same (1.0) → -1.0
-        reward = 1.0 - (2.0 * frequency)
-        rewards.append(reward)
+
+        # Base penalty for duplicates
+        base_reward = 1.0 - (2.0 * frequency)
+
+        # Add decreasing reward for each duplicate instance
+        # First occurrence gets base, subsequent ones get progressively worse
+        if text not in seen_counts:
+            seen_counts[text] = 0
+        seen_counts[text] += 1
+
+        # Tiebreaker: penalize later duplicates more heavily
+        duplicate_penalty = -0.5 * (seen_counts[text] - 1) / n
+
+        # Small random noise to break exact ties in gradient computation
+        noise = random.uniform(-0.01, 0.01)
+
+        rewards.append(base_reward + duplicate_penalty + noise)
 
     return rewards
 
@@ -277,7 +364,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[simulate_path, score_answer, diversity_reward],
+        reward_funcs=[simulate_path, score_answer, format_reward, diversity_reward],
         train_dataset=dataset,
         peft_config=lora_cfg
     )
