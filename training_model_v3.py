@@ -34,15 +34,10 @@ class Maze:
     def apply_chat_template(self, content):
         """Apply tokenizer chat template to content"""
         system_prompt = "You are an expert maze solver. Your job is to output the sequence of directions to reach the goal."
-        user_content = f"""{content}
-
-OUTPUT ONLY THE NECESSARY STEPS TO REACH THE GOAL. Use only: up, down, left, right.
-
-<example_output>up up right down left</example_output>"""
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content}
+            {"role": "user", "content": content}
         ]
         return self.tokenizer.apply_chat_template(
             messages,
@@ -198,16 +193,9 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
         validity_ratio = valid_count / len(tokens)
 
         # Reward high validity ratio
-        format_score = validity_ratio * 2.0 - 1.0  # Maps [0,1] to [-1,1]
+        format_score = validity_ratio * 5 # range would be [0, 5], depending on how much percentage of directions are correct
 
-        # Penalize very short or very long outputs (expect 5-20 steps typically)
-        length_penalty = 0.0
-        if len(tokens) < 3:
-            length_penalty = -0.5 * (3 - len(tokens))
-        elif len(tokens) > 30:
-            length_penalty = -0.1 * (len(tokens) - 30)
-
-        rewards.append(format_score + length_penalty)
+        rewards.append(format_score)
 
     return rewards
 
@@ -364,7 +352,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[simulate_path, score_answer, format_reward, diversity_reward],
+        reward_funcs=[simulate_path, format_reward, diversity_reward],
         train_dataset=dataset,
         peft_config=lora_cfg
     )
