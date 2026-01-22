@@ -139,20 +139,44 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
         else:
             distance_reward = 0.0
 
-        # Penalize extra tokens after simulation ends
-        extra_steps = len(pred_dirs) - (valid_steps + wall_hits)
-        extra_penalty = -0.3 * max(0, extra_steps)
-
         score = (
             (valid_steps * step_reward) +
             (wall_hits * wall_penalty) +
-            extra_penalty +
             distance_reward +
             (reached_end_reward if reached_end else 0.0)
         )
         rewards.append(float(score))
 
     return rewards
+
+
+def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
+    """Reward function that compares predicted length to ground truth length.
+
+    - If lengths match: +2 reward
+    - If lengths differ: penalty equal to the absolute difference
+    """
+    rewards = []
+    for completion, ground_truth in zip(completions, answer):
+        if isinstance(completion, list):
+            text = completion[0].get('content', '') if completion else ''
+        else:
+            text = str(completion)
+
+        pred_dirs = text.lower().strip().split()
+        truth_dirs = ground_truth.lower().strip().split()
+
+        pred_len = len(pred_dirs)
+        truth_len = len(truth_dirs)
+
+        if pred_len == truth_len:
+            rewards.append(2.0)
+        else:
+            diff = abs(pred_len - truth_len)
+            rewards.append(-float(diff))
+
+    return rewards
+
 
 def score_answer(prompts, completions, answer, **kwargs) -> list[float]:
     """Reward function using Hamming distance. Returns negative distance."""
@@ -356,7 +380,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[simulate_path, format_reward, diversity_reward],
+        reward_funcs=[simulate_path, length_reward, format_reward, diversity_reward],
         train_dataset=dataset,
         peft_config=lora_cfg
     )
