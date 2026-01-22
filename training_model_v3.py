@@ -66,6 +66,10 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
     Key insight: We add distance-based shaping so the model gets gradient signal
     even when it doesn't reach the goal. This prevents mode collapse by rewarding
     outputs that get CLOSER to the goal, not just those that reach it.
+    # Currently this does 3 things:
+    - simualtes path
+    - calcualtes reward for how much we've come closer to the goal or if we ran away from it
+    -
     """
     step_reward = 0.5
     wall_penalty = -1.0
