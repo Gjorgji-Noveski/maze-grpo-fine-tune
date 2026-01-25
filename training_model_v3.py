@@ -105,7 +105,7 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
             text = str(completion)
 
         # Extract only the final answer for evaluation
-        text = extract_final_answer(text) or text
+        text = extract_final_answer(text)
 
         # Find start and goal positions
         start_row, start_col = None, None
@@ -178,7 +178,7 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
             text = str(completion)
 
         # Extract only the final answer for evaluation
-        text = extract_final_answer(text) or text
+        text = extract_final_answer(text)
 
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
@@ -206,7 +206,7 @@ def score_answer(prompts, completions, answer, **kwargs) -> list[float]:
             text = str(completion)
 
         # Extract only the final answer for evaluation
-        text = extract_final_answer(text) or text
+        text = extract_final_answer(text)
 
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
@@ -285,7 +285,7 @@ def diversity_reward(prompts, completions, **kwargs) -> list[float]:
         else:
             text = str(completion)
         # Extract only the final answer for diversity comparison
-        final = extract_final_answer(text) or text
+        final = extract_final_answer(text)
         texts.append(final.lower().strip())
 
     counts = Counter(texts)
