@@ -336,6 +336,7 @@ def parse_args():
     train_group = parser.add_argument_group("Training")
     train_group.add_argument("--max_steps", type=int, default=20)
     train_group.add_argument("--num_generations", type=int, default=8, help="Completions per prompt for GRPO")
+    train_group.add_argument("--generation_batch_size", type=int, default=8, help="Completions per forward pass (must be divisible by num_generations)")
     train_group.add_argument("--max_completion_length", type=int, default=512, help="Max tokens for generation (increased for scratchpad reasoning)")
     train_group.add_argument("--batch_size", type=int, default=2, help="Per device train batch size")
     train_group.add_argument("--gradient_accumulation_steps", type=int, default=4)
@@ -410,6 +411,7 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         beta=args.beta,
         num_generations=args.num_generations,
+        generation_batch_size=args.generation_batch_size,  # Must be divisible by num_generations
         max_completion_length=args.max_completion_length,
         per_device_train_batch_size=args.batch_size,
         gradient_checkpointing=True,
