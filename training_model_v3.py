@@ -1,4 +1,5 @@
 import argparse
+import re
 import reasoning_gym
 import textdistance
 import wandb
@@ -33,7 +34,19 @@ class Maze:
 
     def apply_chat_template(self, content):
         """Apply tokenizer chat template to content"""
-        system_prompt = "You are an expert maze solver. Your job is to output the sequence of directions to reach the goal."
+        system_prompt = """You are an expert maze solver. Your job is to output the sequence of directions to reach the goal.
+
+First, think through your solution step by step inside <scratchpad></scratchpad> tags. You can use this area to analyze the maze, plan your path, and work through the problem.
+
+Then, output only the sequence of directions (up, down, left, right) inside <final_answer></final_answer> tags.
+
+Example format:
+<scratchpad>
+[Your reasoning here]
+</scratchpad>
+<final_answer>
+up right down left
+</final_answer>"""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -90,6 +103,9 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
             text = completion[0].get('content', '') if completion else ''
         else:
             text = str(completion)
+
+        # Extract only the final answer for evaluation
+        text = extract_final_answer(text) or text
 
         # Find start and goal positions
         start_row, start_col = None, None
@@ -163,6 +179,9 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
         else:
             text = str(completion)
 
+        # Extract only the final answer for evaluation
+        text = extract_final_answer(text) or text
+
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
 
@@ -188,6 +207,9 @@ def score_answer(prompts, completions, answer, **kwargs) -> list[float]:
         else:
             text = str(completion)
 
+        # Extract only the final answer for evaluation
+        text = extract_final_answer(text) or text
+
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
         distance = textdistance.hamming.distance(pred_dirs, truth_dirs)
@@ -195,11 +217,23 @@ def score_answer(prompts, completions, answer, **kwargs) -> list[float]:
     return rewards
 
 
+def extract_final_answer(text: str) -> str:
+    """Extract text from <final_answer></final_answer> tags.
+
+    Returns the content inside the tags, or empty string if not found.
+    """
+    match = re.search(r'<final_answer>(.*?)</final_answer>', text, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return ''
+
+
 def format_reward(prompts, completions, **kwargs) -> list[float]:
     """Reward well-formed outputs that use valid direction tokens.
 
-    Encourages the model to at least produce syntactically valid outputs
-    rather than gibberish or overly short/long sequences.
+    Encourages the model to:
+    1. Use proper <scratchpad> and <final_answer> tags
+    2. Produce syntactically valid direction outputs in final_answer
     """
     valid_directions = {'up', 'down', 'left', 'right'}
 
@@ -210,18 +244,27 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
         else:
             text = str(completion)
 
-        tokens = text.lower().strip().split()
+        # Check for proper tag structure
+        has_scratchpad = '<scratchpad>' in text.lower() and '</scratchpad>' in text.lower()
+        has_final_answer = '<final_answer>' in text.lower() and '</final_answer>' in text.lower()
 
-        if len(tokens) == 0:
-            rewards.append(-2.0)  # Penalize empty output
-            continue
+        # Extract the final answer content
+        final_answer = extract_final_answer(text)
+        tokens = final_answer.lower().strip().split()
 
-        # Count valid direction tokens
+        # Base reward for proper format structure
+        structure_score = 0.0
+        if has_scratchpad:
+            structure_score += 1.0
+        if has_final_answer:
+            structure_score += 1.0
+
+        # Count valid direction tokens in final answer
         valid_count = sum(1 for t in tokens if t in valid_directions)
-        validity_ratio = valid_count / len(tokens)
+        validity_ratio = valid_count / len(tokens) if tokens else 0.0
 
-        # Reward high validity ratio
-        format_score = validity_ratio * 5 # range would be [0, 5], depending on how much percentage of directions are correct
+        # Reward high validity ratio (max 3) + structure score (max 2)
+        format_score = (validity_ratio * 3.0) + structure_score
 
         rewards.append(format_score)
 
@@ -243,7 +286,9 @@ def diversity_reward(prompts, completions, **kwargs) -> list[float]:
             text = completion[0].get('content', '') if completion else ''
         else:
             text = str(completion)
-        texts.append(text.lower().strip())
+        # Extract only the final answer for diversity comparison
+        final = extract_final_answer(text) or text
+        texts.append(final.lower().strip())
 
     counts = Counter(texts)
     n = len(texts)
@@ -291,7 +336,7 @@ def parse_args():
     train_group = parser.add_argument_group("Training")
     train_group.add_argument("--max_steps", type=int, default=20)
     train_group.add_argument("--num_generations", type=int, default=8, help="Completions per prompt for GRPO")
-    train_group.add_argument("--max_completion_length", type=int, default=128)
+    train_group.add_argument("--max_completion_length", type=int, default=512, help="Max tokens for generation (increased for scratchpad reasoning)")
     train_group.add_argument("--batch_size", type=int, default=2, help="Per device train batch size")
     train_group.add_argument("--gradient_accumulation_steps", type=int, default=4)
     train_group.add_argument("--logging_steps", type=int, default=10)
@@ -333,7 +378,7 @@ if __name__ == "__main__":
 
     # Load tokenizer
     tok = AutoTokenizer.from_pretrained(args.model_path, use_fast=True)
-    # tok.pad_token = tok.eos_token # TODO: CHECK IF THIS DOES ANYTHING ON THE NEXT RUN, IT SHOULD SAY THAT THE TOKENIZER DOESNT HAVE PADDING TOKEN
+    tok.pad_token = tok.eos_token
     maze = Maze(
         tokenizer=tok,
         size=args.dataset_size,
