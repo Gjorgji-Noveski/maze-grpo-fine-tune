@@ -80,9 +80,9 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
     even when it doesn't reach the goal. This prevents mode collapse by rewarding
     outputs that get CLOSER to the goal, not just those that reach it.
     # Currently this does 3 things:
-    - simualtes path
-    - calcualtes reward for how much we've come closer to the goal or if we ran away from it
-    -
+    - simulates path
+    - calculates reward for how much we've come closer to the goal or if we ran away from it
+    - reward for reaching end
     """
     step_reward = 0.5
     wall_penalty = -1.0
@@ -142,6 +142,7 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
                     reached_end = True
                     break
             else:
+                current_row, current_col = new_row, new_col
                 wall_hits += 1
 
         # Calculate final distance to goal
@@ -150,10 +151,7 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
         # Distance improvement reward: positive if we got closer, negative if further
         # Scale by initial distance to normalize across different maze sizes
         distance_improvement = initial_distance - final_distance
-        if initial_distance > 0:
-            distance_reward = 3.0 * (distance_improvement / initial_distance)
-        else:
-            distance_reward = 0.0
+        distance_reward = 3.0 * (distance_improvement / initial_distance)
 
         score = (
             (valid_steps * step_reward) +
