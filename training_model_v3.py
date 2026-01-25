@@ -340,6 +340,8 @@ def parse_args():
     train_group.add_argument("--batch_size", type=int, default=2, help="Per device train batch size")
     train_group.add_argument("--gradient_accumulation_steps", type=int, default=4)
     train_group.add_argument("--logging_steps", type=int, default=10)
+    train_group.add_argument("--save_steps", type=int, default=20, help="Save checkpoint every N steps")
+    train_group.add_argument("--resume_from_checkpoint", action="store_true", help="Resume from latest checkpoint in output_dir")
     train_group.add_argument("--learning_rate", type=float, default=5e-5)
     train_group.add_argument("--beta", type=float, default=0.0, help="KL divergence coefficient (0=no ref model)")
     train_group.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature for diverse completions")
@@ -416,6 +418,9 @@ if __name__ == "__main__":
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
         max_steps=args.max_steps,
+        save_strategy="steps",
+        save_steps=args.save_steps,
+        save_total_limit=1,
         temperature=args.temperature,
         repetition_penalty=args.repetition_penalty,
         generation_kwargs={"do_sample": True},
@@ -435,7 +440,7 @@ if __name__ == "__main__":
         wandb.config.update(vars(args))
 
     print(f"Trainer device: {trainer.args.device}")
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
     # Save LoRA adapter
     save_path = f"{args.output_dir}/lora"
