@@ -79,14 +79,16 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
     Key insight: We add distance-based shaping so the model gets gradient signal
     even when it doesn't reach the goal. This prevents mode collapse by rewarding
     outputs that get CLOSER to the goal, not just those that reach it.
-    # Currently this does 3 things:
+    # Currently this does 4 things:
     - simulates path
     - calculates reward for how much we've come closer to the goal or if we ran away from it
     - reward for reaching end
+    - penalizes moves after reaching goal
     """
     step_reward = 0.5
     wall_penalty = -1.0
     reached_end_reward = 10.0
+    overshoot_penalty = -2.0  # Penalty per move after reaching goal
 
     directions = {
         'up': (-1, 0),
@@ -97,7 +99,6 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
 
     rewards = []
     for completion, meta in zip(completions, metadata):
-        reached_end = False
         mat = meta['matrix']
         if isinstance(completion, list):
             text = completion[0].get('content', '') if completion else ''
@@ -122,6 +123,8 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
 
         valid_steps = 0
         wall_hits = 0
+        reached_end = False
+        moves_after_reaching_end = 0
         rows, cols = len(mat), len(mat[0])
 
         # Calculate initial distance to goal (Manhattan)
@@ -134,16 +137,21 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
 
             dr, dc = directions[direction]
             new_row, new_col = current_row + dr, current_col + dc
+            current_row, current_col = new_row, new_col
 
-            if 0 <= new_row < rows and 0 <= new_col < cols and mat[new_row][new_col] != 'X':
-                current_row, current_col = new_row, new_col
+            # Check validity
+            in_bounds = 0 <= new_row < rows and 0 <= new_col < cols
+            if in_bounds and mat[new_row][new_col] != 'X':
                 valid_steps += 1
-                if mat[new_row][new_col] == '#':
-                    reached_end = True
-                    break
             else:
-                current_row, current_col = new_row, new_col
                 wall_hits += 1
+
+            # Check if at goal
+            if current_row == goal_row and current_col == goal_col:
+                reached_end = True
+            elif reached_end:
+                # Already reached goal but kept moving
+                moves_after_reaching_end += 1
 
         # Calculate final distance to goal
         final_distance = abs(current_row - goal_row) + abs(current_col - goal_col)
@@ -157,7 +165,8 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
             (valid_steps * step_reward) +
             (wall_hits * wall_penalty) +
             distance_reward +
-            (reached_end_reward if reached_end else 0.0)
+            (reached_end_reward if reached_end else -3.0) +
+            (moves_after_reaching_end * overshoot_penalty)
         )
         rewards.append(float(score))
 
@@ -252,7 +261,7 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
 
         # Base reward for proper format structure
         structure_score = 0.0
-        if has_scratchpad:
+        if has_scratchpad: # TODO: here we might need to add else to give -5 if it does not have either of them
             structure_score += 1.0
         if has_final_answer:
             structure_score += 1.0
