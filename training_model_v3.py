@@ -368,7 +368,7 @@ def parse_args():
     # Other
     other_group = parser.add_argument_group("Other")
     other_group.add_argument("--model_path", type=str, default="models/gemma_3.1_4B_instruct")
-    other_group.add_argument("--output_dir", type=str, default="./output_v3")
+    other_group.add_argument("--output_dir", type=str, default="./output")
     other_group.add_argument("--run_name", type=str, default=None, help="Wandb run name")
     other_group.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
     other_group.add_argument("--group_name", type=str, help="Name of the group in wandb")
