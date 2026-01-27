@@ -34,7 +34,7 @@ class Maze:
 
     def apply_chat_template(self, content):
         """Apply tokenizer chat template to content"""
-        system_prompt = """You are an expert maze solver. Your job is to output the sequence of directions to reach the goal.
+        system_prompt = """You are an expert maze solver. Your task is to find the shortest path from the start to the destination point in a grid.
 
 First, think through your solution step by step inside <scratchpad></scratchpad> tags. You can use this area to analyze the maze, plan your path, and work through the problem.
 
@@ -47,7 +47,9 @@ Example format:
 <final_answer>
 up right down left
 </final_answer>"""
-
+        content = content.replace("the length of ", "")
+        content = content.replace(
+            "Your task is to find the shortest path from the start to the destination point in a grid.\n", "")
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": content}
