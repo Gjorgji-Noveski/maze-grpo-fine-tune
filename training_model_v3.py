@@ -35,7 +35,7 @@ class Maze:
         """Apply tokenizer chat template to content"""
         system_prompt = """You are an expert maze solver. Your task is to find the shortest path from the start to the destination point in a grid.
 
-First, think through your solution step by step inside <scratchpad></scratchpad> tags. You can use this area to analyze the maze, plan your path, and work through the problem.
+First, think through your solution step by step inside <scratchpad></scratchpad> tags. You can use this area to analyze the maze, plan your path, and work through the problem. BUT be brief! You can only write around 5 sentences in the scratchpad.
 
 Then, output only the sequence of directions (up, down, left, right) inside <final_answer></final_answer> tags.
 
@@ -44,7 +44,7 @@ Example format:
 [Your reasoning here]
 </scratchpad>
 <final_answer>
-up right down left
+[sequence of directions here]
 </final_answer>"""
         content = content.replace("the length of ", "")
         content = content.replace(
