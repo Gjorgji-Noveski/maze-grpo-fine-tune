@@ -217,7 +217,7 @@ def distance_reward(prompts, completions, metadata, **kwargs) -> list[float]:
 
         # Distance improvement reward: positive if closer, negative if further
         distance_improvement = initial_distance - final_distance
-        reward = 3.0 * (distance_improvement / initial_distance) if initial_distance > 0 else 0.0
+        reward = 3.0 * (distance_improvement / initial_distance)
 
         rewards.append(float(reward))
 
