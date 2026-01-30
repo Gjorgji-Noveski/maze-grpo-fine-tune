@@ -77,13 +77,10 @@ up right down left
 def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
     """Reward function using path simulation through the maze.
 
-    Key insight: We add distance-based shaping so the model gets gradient signal
-    even when it doesn't reach the goal. This prevents mode collapse by rewarding
-    outputs that get CLOSER to the goal, not just those that reach it.
-    # Currently this does 4 things:
-    - simulates path
-    - calculates reward for how much we've come closer to the goal or if we ran away from it
-    - reward for reaching end
+    Evaluates path mechanics:
+    - valid steps taken
+    - wall/boundary hits
+    - reaching the goal
     - penalizes moves after reaching goal
     """
     step_reward = 0.5
@@ -128,9 +125,6 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
         moves_after_reaching_end = 0
         rows, cols = len(mat), len(mat[0])
 
-        # Calculate initial distance to goal (Manhattan)
-        initial_distance = abs(start_row - goal_row) + abs(start_col - goal_col)
-
         for direction in pred_dirs:
             if direction not in directions:
                 wall_hits += 1
@@ -154,22 +148,82 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
                 # Already reached goal but kept moving
                 moves_after_reaching_end += 1
 
-        # Calculate final distance to goal
-        final_distance = abs(current_row - goal_row) + abs(current_col - goal_col)
-
-        # Distance improvement reward: positive if we got closer, negative if further
-        # Scale by initial distance to normalize across different maze sizes
-        distance_improvement = initial_distance - final_distance
-        distance_reward = 3.0 * (distance_improvement / initial_distance)
-
         score = (
             (valid_steps * step_reward) +
             (wall_hits * wall_penalty) +
-            distance_reward +
             (reached_end_reward if reached_end else -3.0) +
             (moves_after_reaching_end * overshoot_penalty)
         )
         rewards.append(float(score))
+
+    return rewards
+
+
+def distance_reward(prompts, completions, metadata, **kwargs) -> list[float]:
+    """Reward based on how much closer we got to the goal.
+
+    Returns 0 if no final answer extracted (let format_reward handle that penalty).
+    Otherwise, returns positive reward for getting closer, negative for moving away.
+    """
+    directions = {
+        'up': (-1, 0),
+        'down': (1, 0),
+        'left': (0, -1),
+        'right': (0, 1)
+    }
+
+    rewards = []
+    for completion, meta in zip(completions, metadata):
+        if isinstance(completion, list):
+            text = completion[0].get('content', '') if completion else ''
+        else:
+            text = str(completion)
+
+        text = extract_final_answer(text)
+        pred_dirs = text.lower().strip().split()
+
+        # No answer extracted - return neutral, let format_reward penalize
+        if not pred_dirs:
+            rewards.append(0.0)
+            continue
+
+        mat = meta['matrix']
+
+        # Find start and goal positions
+        start_row, start_col = None, None
+        goal_row, goal_col = None, None
+        for r, row in enumerate(mat):
+            for c, cell in enumerate(row):
+                if cell == '*':
+                    start_row, start_col = r, c
+                elif cell == '#':
+                    goal_row, goal_col = r, c
+
+        current_row, current_col = start_row, start_col
+        rows, cols = len(mat), len(mat[0])
+
+        # Calculate initial distance to goal (Manhattan)
+        initial_distance = abs(start_row - goal_row) + abs(start_col - goal_col)
+
+        # Simulate the path
+        for direction in pred_dirs:
+            if direction not in directions:
+                continue
+            dr, dc = directions[direction]
+            new_row, new_col = current_row + dr, current_col + dc
+            # Only move if valid
+            in_bounds = 0 <= new_row < rows and 0 <= new_col < cols
+            if in_bounds and mat[new_row][new_col] != 'X':
+                current_row, current_col = new_row, new_col
+
+        # Calculate final distance to goal
+        final_distance = abs(current_row - goal_row) + abs(current_col - goal_col)
+
+        # Distance improvement reward: positive if closer, negative if further
+        distance_improvement = initial_distance - final_distance
+        reward = 3.0 * (distance_improvement / initial_distance) if initial_distance > 0 else 0.0
+
+        rewards.append(float(reward))
 
     return rewards
 
@@ -217,14 +271,10 @@ def extract_final_answer(text: str) -> str:
 
 
 def format_reward(prompts, completions, **kwargs) -> list[float]:
-    """Reward well-formed outputs that use valid direction tokens.
+    """Reward proper tag structure in outputs.
 
-    Encourages the model to:
-    1. Use proper <scratchpad> and <final_answer> tags
-    2. Produce syntactically valid direction outputs in final_answer
+    Checks for <scratchpad> and <final_answer> tags.
     """
-    valid_directions = {'up', 'down', 'left', 'right'}
-
     rewards = []
     for completion in completions:
         if isinstance(completion, list):
@@ -236,25 +286,46 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
         has_scratchpad = '<scratchpad>' in text.lower() and '</scratchpad>' in text.lower()
         has_final_answer = '<final_answer>' in text.lower() and '</final_answer>' in text.lower()
 
-        # Extract the final answer content
-        final_answer = extract_final_answer(text)
-        tokens = final_answer.lower().strip().split()
-
         # Base reward for proper format structure
         structure_score = 0.0
-        if has_scratchpad: # TODO: here we might need to add else to give -5 if it does not have either of them
+        if has_scratchpad:
             structure_score += 1.0
         if has_final_answer:
             structure_score += 1.0
 
-        # Count valid direction tokens in final answer
+        rewards.append(structure_score)
+
+    return rewards
+
+
+def validity_reward(prompts, completions, **kwargs) -> list[float]:
+    """Reward valid direction tokens in final answer.
+
+    Returns 0 if no answer extracted, otherwise rewards based on
+    ratio of valid directions (up, down, left, right) to total tokens.
+    """
+    valid_directions = {'up', 'down', 'left', 'right'}
+
+    rewards = []
+    for completion in completions:
+        if isinstance(completion, list):
+            text = completion[0].get('content', '') if completion else ''
+        else:
+            text = str(completion)
+
+        final_answer = extract_final_answer(text)
+        tokens = final_answer.lower().strip().split()
+
+        # No answer extracted - return neutral
+        if not tokens:
+            rewards.append(0.0)
+            continue
+
         valid_count = sum(1 for t in tokens if t in valid_directions)
-        validity_ratio = valid_count / len(tokens) if tokens else 0.0
+        validity_ratio = valid_count / len(tokens)
 
-        # Reward high validity ratio (max 3) + structure score (max 2)
-        format_score = (validity_ratio * 3.0) + structure_score
-
-        rewards.append(format_score)
+        # Reward high validity ratio (max 3)
+        rewards.append(validity_ratio * 3.0)
 
     return rewards
 
@@ -420,7 +491,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[simulate_path, length_reward, format_reward, diversity_reward],
+        reward_funcs=[simulate_path, distance_reward, length_reward, format_reward, validity_reward, diversity_reward],
         train_dataset=dataset,
         peft_config=lora_cfg
     )
