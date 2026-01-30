@@ -1,7 +1,6 @@
 import argparse
 import re
 import reasoning_gym
-import textdistance
 import wandb
 
 from trl import GRPOTrainer, GRPOConfig
