@@ -206,26 +206,6 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
     return rewards
 
 
-def score_answer(prompts, completions, answer, **kwargs) -> list[float]:
-    """Reward function using Hamming distance. Returns negative distance."""
-    rewards = []
-    # print(f"prompts: {prompts}\n completions: {completions}\n answer: {answer}\n the rest of kwargs: {kwargs}")
-    for completion, ground_truth in zip(completions, answer):
-        if isinstance(completion, list):
-            text = completion[0].get('content', '') if completion else ''
-        else:
-            text = str(completion)
-
-        # Extract only the final answer for evaluation
-        text = extract_final_answer(text)
-
-        pred_dirs = text.lower().strip().split()
-        truth_dirs = ground_truth.lower().strip().split()
-        distance = textdistance.hamming.distance(pred_dirs, truth_dirs)
-        rewards.append(-float(distance))
-    return rewards
-
-
 def extract_final_answer(text: str) -> str:
     """Extract text from <final_answer></final_answer> tags.
 
