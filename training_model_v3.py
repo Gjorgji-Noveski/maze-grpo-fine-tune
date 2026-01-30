@@ -200,7 +200,6 @@ def distance_reward(prompts, completions, metadata, **kwargs) -> list[float]:
                     goal_row, goal_col = r, c
 
         current_row, current_col = start_row, start_col
-        rows, cols = len(mat), len(mat[0])
 
         # Calculate initial distance to goal (Manhattan)
         initial_distance = abs(start_row - goal_row) + abs(start_col - goal_col)
@@ -211,10 +210,7 @@ def distance_reward(prompts, completions, metadata, **kwargs) -> list[float]:
                 continue
             dr, dc = directions[direction]
             new_row, new_col = current_row + dr, current_col + dc
-            # Only move if valid
-            in_bounds = 0 <= new_row < rows and 0 <= new_col < cols
-            if in_bounds and mat[new_row][new_col] != 'X':
-                current_row, current_col = new_row, new_col
+            current_row, current_col = new_row, new_col
 
         # Calculate final distance to goal
         final_distance = abs(current_row - goal_row) + abs(current_col - goal_col)
@@ -251,7 +247,7 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
         truth_len = len(truth_dirs)
 
         if pred_len == truth_len:
-            rewards.append(2.0)
+            rewards.append(3.0)
         else:
             diff = abs(pred_len - truth_len)
             rewards.append(-float(diff))
@@ -491,7 +487,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[simulate_path, distance_reward, length_reward, format_reward, validity_reward, diversity_reward],
+        reward_funcs=[simulate_path, distance_reward, length_reward, format_reward, validity_reward],
         train_dataset=dataset,
         peft_config=lora_cfg
     )
