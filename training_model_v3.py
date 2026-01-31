@@ -9,6 +9,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from peft import LoraConfig
+from config import SYSTEM_PROMPT
 class Maze:
     def __init__(self, tokenizer, dataset_name="shortest_path", min_rows=5, max_rows=8, min_cols=5, max_cols=8, p_blocked=0.4, size=10, seed=None):
         """Initialize maze with dataset parameters"""
@@ -33,24 +34,11 @@ class Maze:
 
     def apply_chat_template(self, content):
         """Apply tokenizer chat template to content"""
-        system_prompt = """You are an expert maze solver. Your task is to find the shortest path from the start to the destination point in a grid.
-
-First, think through your solution step by step inside <scratchpad></scratchpad> tags. You can use this area to analyze the maze, plan your path, and work through the problem. BUT be brief! You can only write around 5 sentences in the scratchpad.
-
-Then, output only the sequence of directions (up, down, left, right) inside <final_answer></final_answer> tags.
-
-Example format:
-<scratchpad>
-[Your reasoning here]
-</scratchpad>
-<final_answer>
-[sequence of directions here]
-</final_answer>"""
         content = content.replace("the length of ", "")
         content = content.replace(
             "Your task is to find the shortest path from the start to the destination point in a grid.\n", "")
         messages = [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": content}
         ]
         return self.tokenizer.apply_chat_template(
