@@ -365,10 +365,10 @@ def diversity_reward(prompts, completions, **kwargs) -> list[float]:
         seen_counts[text] += 1
 
         # Tiebreaker: penalize later duplicates more heavily
-        duplicate_penalty = -0.5 * (seen_counts[text] - 1) / n
+        duplicate_penalty = -1.0 * (seen_counts[text] - 1) / n
 
         # Small random noise to break exact ties in gradient computation
-        noise = random.uniform(-0.01, 0.01)
+        noise = random.uniform(-0.02, 0.02)
 
         rewards.append(base_reward + duplicate_penalty + noise)
 
@@ -487,7 +487,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[simulate_path, distance_reward, length_reward, format_reward, validity_reward],
+        reward_funcs=[simulate_path, distance_reward, length_reward, format_reward, validity_reward, diversity_reward],
         train_dataset=dataset,
         peft_config=lora_cfg
     )
