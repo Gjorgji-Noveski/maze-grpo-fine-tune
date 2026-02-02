@@ -10,6 +10,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from peft import LoraConfig
 from config import SYSTEM_PROMPT
+
+DEFAULT_MODEL_PATH = "models/gemma_3.1_4B_instruct"
 class Maze:
     def __init__(self, tokenizer, dataset_name="shortest_path", min_rows=5, max_rows=8, min_cols=5, max_cols=8, p_blocked=0.4, size=10, seed=None):
         """Initialize maze with dataset parameters"""
@@ -403,22 +405,38 @@ def parse_args():
 
     # Other
     other_group = parser.add_argument_group("Other")
-    other_group.add_argument("--model_path", type=str, default="models/gemma_3.1_4B_instruct")
+    other_group.add_argument("--model_path", type=str, default=DEFAULT_MODEL_PATH)
     other_group.add_argument("--output_dir", type=str, default="./output")
     other_group.add_argument("--run_name", type=str, default=None, help="Wandb run name")
     other_group.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
     other_group.add_argument("--group_name", type=str, help="Name of the group in wandb")
+    other_group.add_argument("--wandb_run_id", type=str, default=None, help="Wandb run ID to resume (find in wandb URL or run overview)")
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.resume_from_checkpoint and args.model_path == DEFAULT_MODEL_PATH:
+        print("\n" + "=" * 60)
+        print("WARNING: RESUMING FROM CHECKPOINT WITH DEFAULT MODEL PATH")
+        print(f"Using: {args.model_path}")
+        print("Make sure this matches the model used in your checkpoint!")
+        print("=" * 60 + "\n")
+
     if not args.no_wandb:
+        if args.resume_from_checkpoint and not args.wandb_run_id:
+            print("\n" + "=" * 60)
+            print("WARNING: RESUMING FROM CHECKPOINT WITHOUT WANDB RUN ID")
+            print("Wandb will create a NEW run with fresh graphs!")
+            print("To continue existing graphs, pass --wandb_run_id <id>")
+            print("=" * 60 + "\n")
         wandb.init(
             project="maze-grpo",
             name=args.run_name,
-            group=args.group_name
+            group=args.group_name,
+            id=args.wandb_run_id,
+            resume="allow" if args.wandb_run_id else None
         )
     device = "mps" if torch.backends.mps.is_available() else "cpu"
 
@@ -477,12 +495,12 @@ if __name__ == "__main__":
         model=model,
         reward_funcs=[simulate_path, distance_reward, length_reward, format_reward, validity_reward, diversity_reward],
         train_dataset=dataset,
-        peft_config=lora_cfg
+        peft_config=None if args.resume_from_checkpoint else lora_cfg
     )
 
     # Log config to wandb
     if not args.no_wandb:
-        wandb.config.update(vars(args))
+        wandb.config.update(vars(args), allow_val_change=True)
 
     print(f"Trainer device: {trainer.args.device}")
     trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
