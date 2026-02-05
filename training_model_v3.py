@@ -8,7 +8,7 @@ from datasets import Dataset
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-from peft import LoraConfig
+from peft import LoraConfig, PeftModel
 from config import SYSTEM_PROMPT
 
 DEFAULT_MODEL_PATH = "models/gemma_3.1_4B_instruct"
@@ -387,7 +387,7 @@ def parse_args():
     train_group.add_argument("--gradient_accumulation_steps", type=int, default=4)
     train_group.add_argument("--logging_steps", type=int, default=10)
     train_group.add_argument("--save_steps", type=int, default=20, help="Save checkpoint every N steps")
-    train_group.add_argument("--resume_from_checkpoint", action="store_true", help="Resume from latest checkpoint in output_dir")
+    train_group.add_argument("--resume_from_checkpoint", type=str, default=None, help="Path to checkpoint directory to resume from")
     train_group.add_argument("--learning_rate", type=float, default=5e-5)
     train_group.add_argument("--beta", type=float, default=0.0, help="KL divergence coefficient (0=no ref model)")
     train_group.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature for diverse completions")
@@ -417,12 +417,6 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    if args.resume_from_checkpoint and args.model_path == DEFAULT_MODEL_PATH:
-        print("\n" + "=" * 60)
-        print("WARNING: RESUMING FROM CHECKPOINT WITH DEFAULT MODEL PATH")
-        print(f"Using: {args.model_path}")
-        print("Make sure this matches the model used in your checkpoint!")
-        print("=" * 60 + "\n")
 
     if not args.no_wandb:
         if args.resume_from_checkpoint and not args.wandb_run_id:
@@ -468,6 +462,12 @@ if __name__ == "__main__":
         task_type="CAUSAL_LM"
     )
 
+    # Load checkpoint if resuming
+    checkpoint_path = args.resume_from_checkpoint
+    if checkpoint_path:
+        print(f"Loading LoRA adapter from: {checkpoint_path}")
+        model = PeftModel.from_pretrained(model, checkpoint_path, is_trainable=True)
+
     training_args = GRPOConfig(
         output_dir=args.output_dir,
         beta=args.beta,
@@ -503,7 +503,7 @@ if __name__ == "__main__":
         wandb.config.update(vars(args), allow_val_change=True)
 
     print(f"Trainer device: {trainer.args.device}")
-    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    trainer.train(resume_from_checkpoint=checkpoint_path)
 
     # Save LoRA adapter
     save_path = f"{args.output_dir}/lora"
