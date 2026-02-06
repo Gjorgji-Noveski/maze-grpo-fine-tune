@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, PeftModel
 from config import SYSTEM_PROMPT
 
-DEFAULT_MODEL_PATH = "models/gemma_3.1_4B_instruct"
+DEFAULT_MODEL_PATH = "models/llama3.2_1B_instruct"
 class Maze:
     def __init__(self, tokenizer, dataset_name="shortest_path", min_rows=5, max_rows=8, min_cols=5, max_cols=8, p_blocked=0.4, size=10, seed=None):
         """Initialize maze with dataset parameters"""
@@ -450,7 +450,7 @@ if __name__ == "__main__":
     dataset = Dataset.from_list(maze.dataset)
 
     # Load model
-    model = AutoModelForCausalLM.from_pretrained(args.model_path, device_map='mps', dtype='auto')
+    model = AutoModelForCausalLM.from_pretrained(args.model_path, device_map='mps', dtype='float16')
     print(f'Model device: {model.device}, dtype: {model.dtype}')
 
     # LoRA config
