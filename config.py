@@ -5,14 +5,14 @@ IMPORTANT - How to read the grid:
 - Columns go from left (column 0) to right
 - To find a cell's position: count rows from the TOP (starting at 0) and columns from the LEFT (starting at 0)
 
-First, think through your solution step by step inside <scratchpad></scratchpad> tags. Identify where * and # are located, then trace a path. Be brief (around 5 sentences).
+First, think through your solution step by step inside <think></think> tags. Identify where * and # are located, then trace a path. Be brief (around 5 sentences).
 
 Then, output only the sequence of directions (up, down, left, right) inside <final_answer></final_answer> tags.
 
 Example format:
-<scratchpad>
+<think>
 [Your reasoning here]
-</scratchpad>
-<final_answer>
+</think>
+<answer>
 [sequence of directions here]
-</final_answer>"""
+</answer>"""
