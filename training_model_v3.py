@@ -259,7 +259,7 @@ def extract_final_answer(text: str) -> str:
 def format_reward(prompts, completions, **kwargs) -> list[float]:
     """Reward proper tag structure in outputs.
 
-    Checks for <scratchpad> and <final_answer> tags.
+    Checks for <think> and <answer> tags.
     """
     rewards = []
     for completion in completions:
@@ -269,14 +269,14 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
             text = str(completion)
 
         # Check for proper tag structure
-        has_scratchpad = '<scratchpad>' in text.lower() and '</scratchpad>' in text.lower()
-        has_final_answer = '<final_answer>' in text.lower() and '</final_answer>' in text.lower()
+        has_think = '<think>' in text.lower() and '</think>' in text.lower()
+        has_answer = '<answer>' in text.lower() and '</answer>' in text.lower()
 
         # Base reward for proper format structure
         structure_score = 0.0
-        if has_scratchpad:
+        if has_think:
             structure_score += 1.0
-        if has_final_answer:
+        if has_answer:
             structure_score += 1.0
 
         rewards.append(structure_score)
