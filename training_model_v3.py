@@ -281,6 +281,60 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
 
     return rewards
 
+def got_to_end_reward(completions, metadata, **kwargs) -> list[float]:
+    reached_end_reward = 1.0
+
+    directions = {
+        'up': (-1, 0),
+        'down': (1, 0),
+        'left': (0, -1),
+        'right': (0, 1)
+    }
+
+    rewards = []
+    for completion, meta in zip(completions, metadata):
+        mat = meta['matrix']
+        if isinstance(completion, list):
+            text = completion[0].get('content', '') if completion else ''
+        else:
+            text = str(completion)
+
+        # Extract only the final answer for evaluation
+        text = extract_final_answer(text)
+
+        # Find start and goal positions
+        start_row, start_col = None, None
+        goal_row, goal_col = None, None
+        for r, row in enumerate(mat):
+            for c, cell in enumerate(row):
+                if cell == '*':
+                    start_row, start_col = r, c
+                elif cell == '#':
+                    goal_row, goal_col = r, c
+
+        current_row, current_col = start_row, start_col
+        pred_dirs = text.lower().strip().split()
+
+        reached_end = False
+
+        for direction in pred_dirs:
+            if direction not in directions:
+                continue
+
+            dr, dc = directions[direction]
+            new_row, new_col = current_row + dr, current_col + dc
+            current_row, current_col = new_row, new_col
+
+
+            # Check if at goal
+            if current_row == goal_row and current_col == goal_col:
+                reached_end = True
+
+        score = reached_end_reward if reached_end else 0.0
+        rewards.append(float(score))
+
+    return rewards
+
 
 def validity_reward(prompts, completions, **kwargs) -> list[float]:
     """Reward valid direction tokens in final answer.
@@ -491,7 +545,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[simulate_path, distance_reward, length_reward, format_reward, validity_reward, diversity_reward],
+        reward_funcs=[got_to_end_reward],
         train_dataset=dataset,
         peft_config=None if args.resume_from_checkpoint else lora_cfg
     )
