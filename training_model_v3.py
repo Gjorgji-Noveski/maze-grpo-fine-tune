@@ -268,18 +268,16 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
         else:
             text = str(completion)
 
-        # Check for proper tag structure
-        has_think = '<think>' in text.lower() and '</think>' in text.lower()
-        has_answer = '<answer>' in text.lower() and '</answer>' in text.lower()
-
-        # Base reward for proper format structure
-        structure_score = 0.0
-        if has_think:
-            structure_score += 1.0
-        if has_answer:
-            structure_score += 1.0
-
-        rewards.append(structure_score)
+        count = 0.0
+        if re.search(r"\s*<think>\s*", text):
+            count += 0.25
+        if re.search(r"\s*</think>\s*", text):
+            count += 0.25
+        if re.search(r"\s*<answer>\s*", text):
+            count += 0.25
+        if re.search(r"\s*</answer>\s*", text):
+            count += 0.25
+        rewards.append(count)
 
     return rewards
 
