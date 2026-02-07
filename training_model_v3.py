@@ -217,7 +217,7 @@ def distance_reward(prompts, completions, metadata, **kwargs) -> list[float]:
 def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
     """Reward function that compares predicted length to ground truth length.
 
-    - If lengths match: +2 reward
+    - If lengths match: +3 reward
     - If lengths differ: penalty equal to the absolute difference
     """
     rewards = []
