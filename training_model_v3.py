@@ -9,7 +9,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from peft import LoraConfig, PeftModel
-from config import SYSTEM_PROMPT
+from config import SYSTEM_PROMPT, THINK_TAG, ANSWER_TAG
 
 DEFAULT_MODEL_PATH = "models/llama3.2_1B_instruct"
 class Maze:
@@ -94,7 +94,7 @@ def simulate_path(prompts, completions, metadata, **kwargs) -> list[float]:
             text = str(completion)
 
         # Extract only the final answer for evaluation
-        text = extract_final_answer(text)
+        text = extract_answer(text)
 
         # Find start and goal positions
         start_row, start_col = None, None
@@ -169,7 +169,7 @@ def distance_reward(prompts, completions, metadata, **kwargs) -> list[float]:
         else:
             text = str(completion)
 
-        text = extract_final_answer(text)
+        text = extract_answer(text)
         pred_dirs = text.lower().strip().split()
 
         # No answer extracted - return neutral, let format_reward penalize
@@ -228,7 +228,7 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
             text = str(completion)
 
         # Extract only the final answer for evaluation
-        text = extract_final_answer(text)
+        text = extract_answer(text)
 
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
@@ -245,16 +245,15 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
     return rewards
 
 
-def extract_final_answer(text: str) -> str:
-    """Extract text from <final_answer></final_answer> tags.
+def extract_answer(text: str) -> str:
+    """Extract text from answer tags defined by ANSWER_TAG constant.
 
     Returns the content inside the tags, or empty string if not found.
     """
-    match = re.search(r'<final_answer>(.*?)</final_answer>', text, re.DOTALL | re.IGNORECASE)
+    match = re.search(rf'<{ANSWER_TAG}>(.*?)</{ANSWER_TAG}>', text, re.DOTALL | re.IGNORECASE)
     if match:
         return match.group(1).strip()
     return ''
-
 
 def format_reward(prompts, completions, **kwargs) -> list[float]:
     """Reward proper tag structure in outputs.
@@ -269,13 +268,13 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
             text = str(completion)
 
         count = 0.0
-        if re.search(r"\s*<think>\s*", text):
+        if re.search(rf"\s*<{THINK_TAG}>\s*", text):
             count += 0.25
-        if re.search(r"\s*</think>\s*", text):
+        if re.search(rf"\s*</{THINK_TAG}>\s*", text):
             count += 0.25
-        if re.search(r"\s*<answer>\s*", text):
+        if re.search(rf"\s*<{ANSWER_TAG}>\s*", text):
             count += 0.25
-        if re.search(r"\s*</answer>\s*", text):
+        if re.search(rf"\s*</{ANSWER_TAG}>\s*", text):
             count += 0.25
         rewards.append(count)
 
@@ -300,7 +299,7 @@ def got_to_end_reward(completions, metadata, **kwargs) -> list[float]:
             text = str(completion)
 
         # Extract only the final answer for evaluation
-        text = extract_final_answer(text)
+        text = extract_answer(text)
 
         # Find start and goal positions
         start_row, start_col = None, None
@@ -351,7 +350,7 @@ def validity_reward(prompts, completions, **kwargs) -> list[float]:
         else:
             text = str(completion)
 
-        final_answer = extract_final_answer(text)
+        final_answer = extract_answer(text)
         tokens = final_answer.lower().strip().split()
 
         # No answer extracted - return neutral
@@ -384,7 +383,7 @@ def diversity_reward(prompts, completions, **kwargs) -> list[float]:
         else:
             text = str(completion)
         # Extract only the final answer for diversity comparison
-        final = extract_final_answer(text)
+        final = extract_answer(text)
         texts.append(final.lower().strip())
 
     counts = Counter(texts)
@@ -500,7 +499,7 @@ if __name__ == "__main__":
         seed=args.seed
     )
     dataset = Dataset.from_list(maze.dataset)
-
+    from reasoning_gym.dataset import ProceduralDataset
     # Load model
     model = AutoModelForCausalLM.from_pretrained(args.model_path, device_map='mps', dtype='float16')
     print(f'Model device: {model.device}, dtype: {model.dtype}')
