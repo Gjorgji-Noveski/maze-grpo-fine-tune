@@ -14,12 +14,12 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
-from config import SYSTEM_PROMPT
+from config import SYSTEM_PROMPT, ANSWER_TAG
 
 
 def extract_final_answer(text: str) -> str:
-    """Extract text from <final_answer></final_answer> tags."""
-    match = re.search(r'<final_answer>(.*?)</final_answer>', text, re.DOTALL | re.IGNORECASE)
+    """Extract text from answer tags."""
+    match = re.search(rf'<{ANSWER_TAG}>(.*?)</{ANSWER_TAG}>', text, re.DOTALL | re.IGNORECASE)
     if match:
         return match.group(1).strip()
     return ''
