@@ -140,6 +140,7 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
         'final_distance': final_distance,
         'predicted_path': text,
         'ground_truth': ' '.join(ground_truth_dirs),
+        'completion': completion,
         'direction_accuracy': direction_accuracy,
     }
 
@@ -170,7 +171,6 @@ def evaluate(model, tokenizer, dataset, max_new_tokens, temperature, device):
 
         # Simulate and check
         result = simulate_and_check(completion, entry['metadata'])
-        result['entry_id'] = entry.get('id', None)
         results.append(result)
 
     return results
@@ -203,7 +203,7 @@ def print_results(results, verbose=False):
             status = "+" if r['reached_goal'] else "x"
             print(f"\n[{i+1}] {status} Distance: {r['final_distance']}, "
                   f"Valid: {r['valid_steps']}, Walls: {r['wall_hits']}")
-            print(f"    Predicted: {r['predicted_path'][:80]}...")
+            print(f"    Predicted: {r['predicted_path']}")
             print(f"    Ground truth: {r['ground_truth']}")
 
     return {
@@ -256,7 +256,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate maze-solving model")
 
     # Model
-    parser.add_argument("--model_path", type=str, default="models/gemma_3.1_4B_instruct",
+    parser.add_argument("--model_path", type=str, default="models/llama3.2_1B_instruct",
                         help="Base model path")
     parser.add_argument("--lora_path", type=str, default=None,
                         help="Path to LoRA adapter (optional)")
