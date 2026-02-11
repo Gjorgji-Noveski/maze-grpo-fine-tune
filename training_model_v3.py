@@ -335,6 +335,52 @@ def got_to_end_reward(completions, metadata, **kwargs) -> list[float]:
     return rewards
 
 
+def binary_got_closer(completions, metadata, **kwargs) -> list[float]:
+    directions = {
+        'up': (-1, 0),
+        'down': (1, 0),
+        'left': (0, -1),
+        'right': (0, 1)
+    }
+
+    rewards = []
+    for completion, meta in zip(completions, metadata):
+        mat = meta['matrix']
+        if isinstance(completion, list):
+            text = completion[0].get('content', '') if completion else ''
+        else:
+            text = str(completion)
+
+        text = extract_answer(text)
+
+        start_row, start_col = None, None
+        goal_row, goal_col = None, None
+        for r, row in enumerate(mat):
+            for c, cell in enumerate(row):
+                if cell == '*':
+                    start_row, start_col = r, c
+                elif cell == '#':
+                    goal_row, goal_col = r, c
+
+        initial_dist = abs(start_row - goal_row) + abs(start_col - goal_col)
+
+        current_row, current_col = start_row, start_col
+        pred_dirs = text.lower().strip().split()
+
+        for direction in pred_dirs:
+            if direction not in directions:
+                continue
+            dr, dc = directions[direction]
+            new_row, new_col = current_row + dr, current_col + dc
+            current_row, current_col = new_row, new_col
+
+        final_dist = abs(current_row - goal_row) + abs(current_col - goal_col)
+        score = 0.5 if final_dist < initial_dist else 0.0
+        rewards.append(float(score))
+
+    return rewards
+
+
 def validity_reward(prompts, completions, **kwargs) -> list[float]:
     """Reward valid direction tokens in final answer.
 
