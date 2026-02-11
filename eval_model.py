@@ -110,11 +110,11 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
 
         dr, dc = directions[direction]
         new_row, new_col = current_row + dr, current_col + dc
+        current_row, current_col = new_row, new_col
 
         # Check validity
         in_bounds = 0 <= new_row < rows and 0 <= new_col < cols
         if in_bounds and mat[new_row][new_col] != 'X':
-            current_row, current_col = new_row, new_col
             valid_steps += 1
         else:
             wall_hits += 1
