@@ -590,7 +590,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[got_to_end_reward],
+        reward_funcs=[got_to_end_reward, binary_got_closer],
         train_dataset=dataset,
         peft_config=None if args.resume_from_checkpoint else lora_cfg
     )
