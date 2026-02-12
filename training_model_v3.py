@@ -1,4 +1,5 @@
 import argparse
+import os
 import re
 import reasoning_gym
 import wandb
@@ -564,6 +565,8 @@ if __name__ == "__main__":
     if checkpoint_path:
         print(f"Loading LoRA adapter from: {checkpoint_path}")
         model = PeftModel.from_pretrained(model, checkpoint_path, is_trainable=True)
+
+    args.output_dir = os.path.join("output", args.run_name)
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,
