@@ -185,13 +185,15 @@ def print_results(results, verbose=False):
     avg_distance = sum(r['final_distance'] for r in results) / total if total > 0 else 0
     avg_valid_steps = sum(r['valid_steps'] for r in results) / total if total > 0 else 0
     avg_wall_hits = sum(r['wall_hits'] for r in results) / total if total > 0 else 0
-    avg_direction_accuracy = sum(r['direction_accuracy'] for r in results) / total if total > 0 else 0
+    # TODO: Remove or fix this, it takes the min(len) between predicted and ground truth when calculating
+    # TODO: this metric, for instance: pred: right right down, TRUTH: right right---> this would give 100% direction accuracy
+    # avg_direction_accuracy = sum(r['direction_accuracy'] for r in results) / total if total > 0 else 0
 
     print("\n" + "=" * 50)
     print("EVALUATION RESULTS")
     print("=" * 50)
     print(f"Accuracy (reached goal): {accuracy:.1f}% ({correct}/{total})")
-    print(f"Avg direction accuracy: {avg_direction_accuracy:.1f}%")
+    # print(f"Avg direction accuracy: {avg_direction_accuracy:.1f}%")
     print(f"Avg final distance to goal: {avg_distance:.2f}")
     print(f"Avg valid steps: {avg_valid_steps:.2f}")
     print(f"Avg wall hits: {avg_wall_hits:.2f}")
@@ -207,13 +209,13 @@ def print_results(results, verbose=False):
             print(f"    Ground truth: {r['ground_truth']}")
 
     return {
-        'accuracy': accuracy,
-        'avg_direction_accuracy': avg_direction_accuracy,
-        'avg_distance': avg_distance,
-        'avg_valid_steps': avg_valid_steps,
-        'avg_wall_hits': avg_wall_hits,
-        'total': total,
-        'correct': correct
+        "accuracy": accuracy,
+        # 'avg_direction_accuracy': avg_direction_accuracy,
+        "avg_distance": avg_distance,
+        "avg_valid_steps": avg_valid_steps,
+        "avg_wall_hits": avg_wall_hits,
+        "total": total,
+        "correct": correct,
     }
 
 
@@ -344,7 +346,10 @@ if __name__ == "__main__":
     if args.output_json:
         # Insert timestamp before .json extension
         output_path = Path(args.output_json)
-        json_path = output_path.parent / f"{output_path.stem}_{timestamp}{output_path.suffix}"
+        json_path = (
+            output_path.parent
+            / f"eval_results/{output_path.stem}_{timestamp}{output_path.suffix}"
+        )
     else:
         json_path = f"eval_results/eval_{timestamp}.json"
 
