@@ -218,7 +218,7 @@ def distance_reward(prompts, completions, metadata, **kwargs) -> list[float]:
 def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
     """Reward function that compares predicted length to ground truth length.
 
-    - If lengths match: +3 reward
+    - If lengths match: +1 reward
     - If lengths differ: penalty equal to the absolute difference
     """
     rewards = []
@@ -233,15 +233,17 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
 
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
-
+        if pred_dirs == "":
+            rewards.append(-1000.0)
+            continue
         pred_len = len(pred_dirs)
         truth_len = len(truth_dirs)
 
         if pred_len == truth_len:
-            rewards.append(3.0)
+            rewards.append(1.0)
         else:
             diff = abs(pred_len - truth_len)
-            rewards.append(-float(diff))
+            rewards.append(-min(float(diff), 5.0))
 
     return rewards
 
@@ -593,7 +595,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[got_to_end_reward, binary_got_closer],
+        reward_funcs=[got_to_end_reward, length_reward],
         train_dataset=dataset,
         peft_config=None if args.resume_from_checkpoint else lora_cfg
     )
