@@ -583,7 +583,7 @@ if __name__ == "__main__":
         max_steps=args.max_steps,
         save_strategy="steps",
         save_steps=args.save_steps,
-        save_total_limit=1,
+        save_total_limit=3,
         temperature=args.temperature,
         repetition_penalty=args.repetition_penalty,
         generation_kwargs={"do_sample": True},
