@@ -233,7 +233,7 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
 
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
-        if pred_dirs == "":
+        if len(pred_dirs) == 0:
             rewards.append(-1000.0)
             continue
         pred_len = len(pred_dirs)
