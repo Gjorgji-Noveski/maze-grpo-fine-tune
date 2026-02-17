@@ -233,9 +233,6 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
 
         pred_dirs = text.lower().strip().split()
         truth_dirs = ground_truth.lower().strip().split()
-        if len(pred_dirs) == 0:
-            rewards.append(-1000.0)
-            continue
         pred_len = len(pred_dirs)
         truth_len = len(truth_dirs)
 
@@ -257,6 +254,24 @@ def extract_answer(text: str) -> str:
     if match:
         return match.group(1).strip()
     return ''
+
+def no_answer_reward(completions, **kwargs) -> list[float]:
+    """Penalize completions that have no extractable answer."""
+    rewards = []
+    for completion in completions:
+        if isinstance(completion, list):
+            text = completion[0].get('content', '') if completion else ''
+        else:
+            text = str(completion)
+
+        answer = extract_answer(text)
+        if len(answer.strip()) == 0:
+            rewards.append(-5.0)
+        else:
+            rewards.append(0.0)
+
+    return rewards
+
 
 def format_reward(prompts, completions, **kwargs) -> list[float]:
     """Reward proper tag structure in outputs.
@@ -595,7 +610,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[got_to_end_reward, length_reward],
+        reward_funcs=[got_to_end_reward, length_reward, format_reward],
         train_dataset=dataset,
         peft_config=None if args.resume_from_checkpoint else lora_cfg
     )
