@@ -597,6 +597,7 @@ if __name__ == "__main__":
         logging_steps=args.logging_steps,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
+        lr_scheduler_type="constant",
         max_steps=args.max_steps,
         save_strategy="steps",
         save_steps=args.save_steps,
