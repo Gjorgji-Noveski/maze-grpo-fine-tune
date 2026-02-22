@@ -236,12 +236,12 @@ def length_reward(prompts, completions, answer, **kwargs) -> list[float]:
         pred_len = len(pred_dirs)
         truth_len = len(truth_dirs)
 
+        diff = abs(pred_len - truth_len)
+
         if pred_len == truth_len:
             rewards.append(1.0)
         else:
-            diff = abs(pred_len - truth_len)
-            rewards.append(-min(float(diff), 5.0))
-
+            rewards.append(0.0)
     return rewards
 
 
@@ -299,7 +299,7 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
     return rewards
 
 def got_to_end_reward(completions, metadata, **kwargs) -> list[float]:
-    reached_end_reward = 1.0
+    reached_end_reward = 2.0
 
     directions = {
         'up': (-1, 0),
