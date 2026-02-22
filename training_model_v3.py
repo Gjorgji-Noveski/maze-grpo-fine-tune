@@ -9,7 +9,7 @@ from datasets import Dataset
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-from peft import LoraConfig, PeftModel
+from peft import LoraConfig
 from config import SYSTEM_PROMPT, THINK_TAG, ANSWER_TAG
 
 DEFAULT_MODEL_PATH = "models/llama3.2_1B_instruct"
@@ -577,11 +577,7 @@ if __name__ == "__main__":
         task_type="CAUSAL_LM"
     )
 
-    # Load checkpoint if resuming
     checkpoint_path = args.resume_from_checkpoint
-    if checkpoint_path:
-        print(f"Loading LoRA adapter from: {checkpoint_path}")
-        model = PeftModel.from_pretrained(model, checkpoint_path, is_trainable=True)
 
     args.output_dir = os.path.join("output", args.run_name)
 
@@ -613,7 +609,7 @@ if __name__ == "__main__":
         model=model,
         reward_funcs=[got_to_end_reward, length_reward, format_reward],
         train_dataset=dataset,
-        peft_config=None if args.resume_from_checkpoint else lora_cfg
+        peft_config=lora_cfg
     )
 
     # Log config to wandb
