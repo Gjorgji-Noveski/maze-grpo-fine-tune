@@ -624,6 +624,6 @@ if __name__ == "__main__":
 
     # Save LoRA adapter
     save_path = f"{args.output_dir}/lora"
-    model.save_pretrained(save_path)
+    trainer.model.save_pretrained(save_path)
     tok.save_pretrained(save_path)
     print(f"Done. LoRA adapter saved to {save_path}")
