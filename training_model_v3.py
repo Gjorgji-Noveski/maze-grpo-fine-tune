@@ -615,6 +615,7 @@ if __name__ == "__main__":
     # Log config to wandb
     if not args.no_wandb:
         wandb.config.update(vars(args), allow_val_change=True)
+        wandb.config.update(training_args.to_sanitized_dict(), allow_val_change=True)
 
     print(f"Trainer device: {trainer.args.device}")
     trainer.train(resume_from_checkpoint=checkpoint_path)
