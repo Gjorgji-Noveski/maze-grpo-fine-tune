@@ -342,10 +342,9 @@ def got_to_end_reward(completions, metadata, **kwargs) -> list[float]:
             new_row, new_col = current_row + dr, current_col + dc
             current_row, current_col = new_row, new_col
 
-
-            # Check if at goal
-            if current_row == goal_row and current_col == goal_col:
-                reached_end = True
+        # Check if at goal
+        if current_row == goal_row and current_col == goal_col:
+            reached_end = True
 
         score = reached_end_reward if reached_end else 0.0
         rewards.append(float(score))
@@ -607,7 +606,7 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[got_to_end_reward, length_reward, format_reward],
+        reward_funcs=[got_to_end_reward, format_reward, binary_got_closer],
         train_dataset=dataset,
         peft_config=lora_cfg
     )
