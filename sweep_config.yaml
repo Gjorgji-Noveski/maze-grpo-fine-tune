@@ -1,0 +1,11 @@
+program: sweep_train.py
+method: grid
+metric:
+  name: reward/mean
+  goal: maximize
+
+parameters:
+  learning_rate:
+    values: [1e-6, 1e-7, 1e-8, 1e-9, 1e-10]
+  reward_set:
+    values: [1, 2, 3]

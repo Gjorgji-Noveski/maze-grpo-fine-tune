@@ -526,7 +526,8 @@ def parse_args():
     other_group.add_argument("--group_name", type=str, help="Name of the group in wandb")
     other_group.add_argument("--wandb_run_id", type=str, default=None, help="Wandb run ID to resume (find in wandb URL or run overview)")
     other_group.add_argument("--full_fine_tune", action="store_true",  help="If full fine tuning should be performed")
-
+    other_group.add_argument("--reward_set", type=int, default=None, choices=[1, 2, 3],
+                             help="Reward function set: 1=[got_to_end], 2=[got_to_end, format], 3=[got_to_end, format, binary_got_closer]")
 
     return parser.parse_args()
 
@@ -608,7 +609,11 @@ if __name__ == "__main__":
     trainer = GRPOTrainer(
         args=training_args,
         model=model,
-        reward_funcs=[got_to_end_reward, format_reward, binary_got_closer],
+        reward_funcs={
+            1: [got_to_end_reward],
+            2: [got_to_end_reward, format_reward],
+            3: [got_to_end_reward, format_reward, binary_got_closer],
+        }.get(args.reward_set, [got_to_end_reward, format_reward, binary_got_closer]),
         train_dataset=dataset,
         peft_config= None if args.full_fine_tune else lora_cfg
     )
