@@ -525,6 +525,8 @@ def parse_args():
     other_group.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
     other_group.add_argument("--group_name", type=str, help="Name of the group in wandb")
     other_group.add_argument("--wandb_run_id", type=str, default=None, help="Wandb run ID to resume (find in wandb URL or run overview)")
+    other_group.add_argument("--full_fine_tune", action="store_true",  help="If full fine tuning should be performed")
+
 
     return parser.parse_args()
 
@@ -608,7 +610,7 @@ if __name__ == "__main__":
         model=model,
         reward_funcs=[got_to_end_reward, format_reward, binary_got_closer],
         train_dataset=dataset,
-        peft_config=lora_cfg
+        peft_config= None if args.full_fine_tune else lora_cfg
     )
 
     # Log config to wandb
