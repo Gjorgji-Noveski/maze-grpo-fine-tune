@@ -21,7 +21,7 @@ command:
   - "--max_cols=3"
   - "--dataset_size=10000"
   - "--max_steps=100"
-  - "--temperature=0.6"
+  - "--temperature=0.5"
   - "--logging_steps=5"
   - "--save_steps=99"
   - "--max_completion_length=600"
