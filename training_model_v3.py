@@ -549,6 +549,15 @@ if __name__ == "__main__":
             id=args.wandb_run_id,
             resume="allow" if args.wandb_run_id else None
         )
+        # Override args with sweep params if running under a wandb sweep
+        sweep_config = dict(wandb.config)
+        if "learning_rate" in sweep_config:
+            args.learning_rate = sweep_config["learning_rate"]
+        if "reward_set" in sweep_config:
+            args.reward_set = int(sweep_config["reward_set"])
+        if not args.run_name:
+            args.run_name = f"lr{args.learning_rate}_rewards{args.reward_set}"
+            wandb.run.name = args.run_name
     device = "mps" if torch.backends.mps.is_available() else "cpu"
 
     # Load tokenizer
