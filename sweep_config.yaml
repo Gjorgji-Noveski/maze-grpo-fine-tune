@@ -1,4 +1,5 @@
-program: sweep_train.py
+project: maze-grpo
+program: training_model_v3.py
 method: grid
 metric:
   name: reward/mean
@@ -9,3 +10,22 @@ parameters:
     values: [1e-6, 1e-7, 1e-8, 1e-9, 1e-10]
   reward_set:
     values: [1, 2, 3]
+
+command:
+  - uv
+  - run
+  - ${program}
+  - "--min_rows=3"
+  - "--max_rows=3"
+  - "--min_cols=3"
+  - "--max_cols=3"
+  - "--dataset_size=10000"
+  - "--max_steps=50"
+  - "--temperature=0.6"
+  - "--logging_steps=5"
+  - "--save_steps=300"
+  - "--max_completion_length=600"
+  - "--num_generations=6"
+  - "--generation_batch_size=6"
+  - "--full_fine_tune"
+  - "--group_name=sweep"
