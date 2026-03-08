@@ -626,7 +626,10 @@ if __name__ == "__main__":
         train_dataset=dataset,
         peft_config= None if args.full_fine_tune else lora_cfg
     )
-
+    # Override args with any sweep params automatically
+    for key, value in wandb.config.items():
+        if hasattr(args, key):
+            setattr(args, key, type(getattr(args, key))(value))
     # Log config to wandb
     if not args.no_wandb:
         wandb.config.update(vars(args), allow_val_change=True)
