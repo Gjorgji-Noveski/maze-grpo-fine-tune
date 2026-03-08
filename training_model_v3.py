@@ -286,13 +286,13 @@ def format_reward(prompts, completions, **kwargs) -> list[float]:
             text = str(completion)
 
         count = 0.0
-        if re.search(rf"\s*<{THINK_TAG}>\s*", text):
+        if len(re.findall(rf"<{THINK_TAG}>", text, re.IGNORECASE)) == 1:
             count += 0.25
-        if re.search(rf"\s*</{THINK_TAG}>\s*", text):
+        if len(re.findall(rf"</{THINK_TAG}>", text, re.IGNORECASE)) == 1:
             count += 0.25
-        if re.search(rf"\s*<{ANSWER_TAG}>\s*", text):
+        if len(re.findall(rf"<{ANSWER_TAG}>", text, re.IGNORECASE)) == 1:
             count += 0.25
-        if re.search(rf"\s*</{ANSWER_TAG}>\s*", text):
+        if len(re.findall(rf"</{ANSWER_TAG}>", text, re.IGNORECASE)) == 1:
             count += 0.25
         rewards.append(count)
 
