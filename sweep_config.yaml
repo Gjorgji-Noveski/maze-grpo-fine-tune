@@ -7,7 +7,7 @@ metric:
 
 parameters:
   learning_rate:
-    values: [1e-6, 1e-7, 1e-8, 1e-9, 1e-10]
+    values: [1e-6, 1e-8, 1e-10]
   reward_set:
     values: [1, 2, 3]
 
@@ -20,10 +20,10 @@ command:
   - "--min_cols=3"
   - "--max_cols=3"
   - "--dataset_size=10000"
-  - "--max_steps=50"
+  - "--max_steps=100"
   - "--temperature=0.6"
   - "--logging_steps=5"
-  - "--save_steps=300"
+  - "--save_steps=99"
   - "--max_completion_length=600"
   - "--num_generations=6"
   - "--generation_batch_size=6"
