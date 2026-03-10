@@ -9,7 +9,9 @@ parameters:
   learning_rate:
     values: [1e-3, 1e-4, 1e-5, 1e-6]
   reward_set:
-    values: [1, 2, 3]
+    values: [1, 2]
+  temperature:
+    values: [0.4, 0.6, 0.8]
 
 command:
   - uv
@@ -21,7 +23,6 @@ command:
   - "--max_cols=3"
   - "--dataset_size=10000"
   - "--max_steps=100"
-  - "--temperature=0.5"
   - "--logging_steps=5"
   - "--save_steps=99"
   - "--max_completion_length=600"
