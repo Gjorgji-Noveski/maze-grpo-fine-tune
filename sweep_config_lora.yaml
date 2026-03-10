@@ -1,0 +1,30 @@
+project: maze-grpo
+program: training_model_v3.py
+method: grid
+metric:
+  name: reward/mean
+  goal: maximize
+
+parameters:
+  learning_rate:
+    values: [1e-3, 1e-4, 1e-5, 1e-6]
+  reward_set:
+    values: [1, 2, 3]
+
+command:
+  - uv
+  - run
+  - ${program}
+  - "--min_rows=3"
+  - "--max_rows=3"
+  - "--min_cols=3"
+  - "--max_cols=3"
+  - "--dataset_size=10000"
+  - "--max_steps=100"
+  - "--temperature=0.5"
+  - "--logging_steps=5"
+  - "--save_steps=99"
+  - "--max_completion_length=600"
+  - "--num_generations=6"
+  - "--generation_batch_size=6"
+  - "--group_name=sweep_lora"
