@@ -556,7 +556,7 @@ if __name__ == "__main__":
         if "reward_set" in sweep_config:
             args.reward_set = int(sweep_config["reward_set"])
         if not args.run_name:
-            args.run_name = f"lr{args.learning_rate}_rewards{args.reward_set}"
+            args.run_name = "_".join(f"{k}{v}" for k, v in sweep_config.items())
             wandb.run.name = args.run_name
     device = "mps" if torch.backends.mps.is_available() else "cpu"
 
