@@ -4,67 +4,16 @@ Generates completions on a held-out maze dataset and reports accuracy.
 """
 import argparse
 import json
-import re
 from datetime import datetime
 from pathlib import Path
 from tqdm import tqdm
 
-import reasoning_gym
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
-from config import SYSTEM_PROMPT, ANSWER_TAG
-
-
-def extract_final_answer(text: str) -> str:
-    """Extract text from answer tags."""
-    match = re.search(rf'<{ANSWER_TAG}>(.*?)</{ANSWER_TAG}>', text, re.DOTALL | re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    return ''
-
-
-def create_eval_dataset(tokenizer, size, min_rows, max_rows, min_cols, max_cols, p_blocked, seed):
-    """Create evaluation maze dataset.
-
-    Returns:
-        tuple: (filtered_dataset, original_size, filtered_size)
-    """
-    dataset = reasoning_gym.create_dataset(
-        "shortest_path",
-        min_rows=min_rows,
-        max_rows=max_rows,
-        min_cols=min_cols,
-        max_cols=max_cols,
-        p_blocked=p_blocked,
-        size=size,
-        seed=seed
-    )
-
-    original_size = len(dataset)
-
-    # Filter infeasible and format prompts
-    filtered = []
-    for entry in dataset:
-        if entry['answer'].lower() != 'infeasible':
-            question = entry['question']
-            start_idx = question.find('If there is no path')
-            end_idx = question.find('Your output should be')
-            clean_prompt = question[:start_idx] + question[end_idx:]
-
-            messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": clean_prompt}
-            ]
-            entry['prompt'] = tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True
-            )
-            filtered.append(entry)
-
-    return filtered, original_size, len(filtered)
+from dataset import create_maze_dataset
+from reward_functions.utils import extract_answer
 
 
 def simulate_and_check(completion: str, metadata: dict) -> dict:
@@ -84,7 +33,7 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
     }
 
     mat = metadata['matrix']
-    text = extract_final_answer(completion)
+    text = extract_answer(completion)
 
     # Find start and goal positions
     start_row, start_col = None, None
@@ -317,7 +266,7 @@ if __name__ == "__main__":
 
     # Create eval dataset
     print(f"\nCreating eval dataset with seed={args.seed}, size={args.eval_size}...")
-    eval_dataset, original_size, filtered_size = create_eval_dataset(
+    eval_dataset, original_size, filtered_size = create_maze_dataset(
         tokenizer,
         size=args.eval_size,
         min_rows=args.min_rows,
