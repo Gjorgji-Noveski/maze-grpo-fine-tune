@@ -1,5 +1,5 @@
 project: maze-grpo
-program: training_model_v3.py
+program: train.py
 method: grid
 metric:
   name: reward/mean
