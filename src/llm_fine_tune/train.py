@@ -126,7 +126,7 @@ if __name__ == "__main__":
 
     checkpoint_path = args.resume_from_checkpoint
 
-    args.output_dir = os.path.join("../../output", args.run_name)
+    args.output_dir = os.path.join(args.output_dir, args.run_name)
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,
@@ -163,9 +163,10 @@ if __name__ == "__main__":
         peft_config= None if args.full_fine_tune else lora_cfg
     )
     # Override args with any sweep params automatically
-    for key, value in wandb.config.items():
-        if hasattr(args, key):
-            setattr(args, key, type(getattr(args, key))(value))
+    if not args.no_wandb:
+        for key, value in wandb.config.items():
+            if hasattr(args, key):
+                setattr(args, key, type(getattr(args, key))(value))
     # Log config to wandb
     if not args.no_wandb:
         wandb.config.update(vars(args), allow_val_change=True)
@@ -174,8 +175,11 @@ if __name__ == "__main__":
     print(f"Trainer device: {trainer.args.device}")
     trainer.train(resume_from_checkpoint=checkpoint_path)
 
-    # Save LoRA adapter
-    save_path = f"{args.output_dir}/lora"
+    # Save model
+    if args.full_fine_tune:
+        save_path = f"{args.output_dir}/model"
+    else:
+        save_path = f"{args.output_dir}/lora"
     trainer.model.save_pretrained(save_path)
     tok.save_pretrained(save_path)
-    print(f"Done. LoRA adapter saved to {save_path}")
+    print(f"Done. {'Model' if args.full_fine_tune else 'LoRA adapter'} saved to {save_path}")
