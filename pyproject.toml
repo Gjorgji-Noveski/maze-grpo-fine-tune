@@ -1,10 +1,21 @@
 [project]
 name = "llm-fine-tune"
 version = "0.1.0"
-description = "Add your description here"
-requires-python = ">=3.11"
+description = "Fine-tune an LLM to navigate 2D grid mazes using GRPO reinforcement learning"
+requires-python = ">=3.12"
 dependencies = [
     "datasets>=4.4.2",
+    "numpy>=2.4.0",
+    "peft>=0.18.0",
+    "python-dotenv>=1.2.2",
+    "reasoning-gym>=0.1.24",
+    "torch==2.9.1",
+    "transformers>=4.57.3",
+    "trl>=0.26.2",
+    "wandb>=0.24.0",
+]
+[dependency-groups]
+dev = [
     "gguf>=0.17.1",
     "gymnasium>=1.2.3",
     "ipywidgets>=8.1.8",
@@ -13,17 +24,9 @@ dependencies = [
     "mlx>=0.8.0",
     "mlx-lm>=0.29.1",
     "notebook>=7.5.1",
-    "numpy>=2.4.0",
     "ollama>=0.6.1",
-    "peft>=0.18.0",
-    "python-dotenv>=1.2.2",
-    "reasoning-gym>=0.1.24",
     "rich>=14.2.0",
     "textdistance>=4.6.3",
-    "torch==2.9.1",
-    "transformers>=4.57.3",
-    "trl>=0.26.2",
-    "wandb>=0.24.0",
 ]
 
 [build-system]
