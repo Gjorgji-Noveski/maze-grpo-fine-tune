@@ -4,6 +4,7 @@ Generates completions on a held-out maze dataset and reports accuracy.
 """
 import argparse
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from tqdm import tqdm
@@ -11,9 +12,13 @@ from tqdm import tqdm
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
+from dotenv import load_dotenv
 
 from llm_fine_tune.dataset import create_maze_dataset
-from llm_fine_tune.utils.utils import extract_answer
+from llm_fine_tune.rewards import _simulate_directions
+from llm_fine_tune.utils.utils import extract_answer, find_starting_and_goal_positions
+
+load_dotenv()
 
 
 def simulate_and_check(completion: str, metadata: dict) -> dict:
@@ -25,53 +30,20 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
         - wall_hits: int
         - final_distance: int (Manhattan distance to goal)
     """
-    directions = {
-        'up': (-1, 0),
-        'down': (1, 0),
-        'left': (0, -1),
-        'right': (0, 1)
-    }
-
     mat = metadata['matrix']
     text = extract_answer(completion)
 
-    # Find start and goal positions
-    start_row, start_col = None, None
-    goal_row, goal_col = None, None
-    for r, row in enumerate(mat):
-        for c, cell in enumerate(row):
-            if cell == '*':
-                start_row, start_col = r, c
-            elif cell == '#':
-                goal_row, goal_col = r, c
+    start_row, start_col, goal_row, goal_col = find_starting_and_goal_positions(mat)
 
-    current_row, current_col = start_row, start_col
-    pred_dirs = text.lower().strip().split()
-
-    valid_steps = 0
-    wall_hits = 0
-    rows, cols = len(mat), len(mat[0])
-
-    for direction in pred_dirs:
-        if direction not in directions:
-            wall_hits += 1
-            continue
-
-        dr, dc = directions[direction]
-        new_row, new_col = current_row + dr, current_col + dc
-        current_row, current_col = new_row, new_col
-
-        # Check validity
-        in_bounds = 0 <= new_row < rows and 0 <= new_col < cols
-        if in_bounds and mat[new_row][new_col] != 'X':
-            valid_steps += 1
-        else:
-            wall_hits += 1
+    current_row, current_col, valid_steps, wall_hits = _simulate_directions(
+        mat, (start_row, start_col), text
+    )
 
     reached_goal = (current_row == goal_row and current_col == goal_col)
     final_distance = abs(current_row - goal_row) + abs(current_col - goal_col)
 
     # Calculate percentage of correct directions
+    pred_dirs = text.lower().strip().split()
     ground_truth_dirs = metadata.get('solution', [])
     correct_dirs = 0
     compare_length = min(len(pred_dirs), len(ground_truth_dirs))
@@ -240,7 +212,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    device = os.getenv("DEVICE", "mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
 
     # Load tokenizer
