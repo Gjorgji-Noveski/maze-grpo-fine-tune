@@ -28,7 +28,7 @@ llm_fine_tune/
 ```
 
 ## Setup
-Before running training, make sure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) installed, then create a virtual environment with `uv venv`.
+This project requires **Python 3.12.12**. Before running training, make sure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) installed, then create a virtual environment with `uv venv`.
 
 Then install the project dependencies:
 ```bash
@@ -41,7 +41,7 @@ DEFAULT_MODEL_PATH=/path/to/your/local/model
 DEVICE=mps  # mps | cuda | cpu (in this project mps was used)
 ```
 
-Download a model into the `models` folder using the [HuggingFace CLI](https://huggingface.co/docs/huggingface_hub/en/guides/cli). For certain models on HuggingFace you will have to be granted models access.
+Download a model into the `models` folder using the [HuggingFace CLI](https://huggingface.co/docs/huggingface_hub/en/guides/cli). For certain models on HuggingFace you will have to be granted access to the model.
 
 ```bash
 hf download meta-llama/Llama-3.2-1B-Instruct --local-dir models/
@@ -93,7 +93,7 @@ An example command to initiate a single training run with a reward set:
 python src/llm_fine_tune/train.py --min_rows 3 --max_rows 3 --min_cols 3 --max_cols 3 --dataset_size 5000 --max_steps 500 --run_name example_run_name --group_name small_maze_sizes --temperature 0.6 --logging_steps 5 --save_steps 300 --learning_rate 1e-8 --max_completion_length 600 --num_generations 6 --generation_batch_size 6 --reward_set 3
 ```
 
-Three reward sets are available via `--reward_set`:
+Three reward sets are available via `--reward_set` (defined in `train.py`):
 - `1`: `[got_to_end]`
 - `2`: `[got_to_end, format]`
 - `3`: `[got_to_end, format, binary_got_closer]`
@@ -132,7 +132,7 @@ Most noticeable arguments:
 | `--resume_from_checkpoint` | None                  | Path to checkpoint directory to resume training from |
 | `--wandb_run_id`           | None                  | W&B run ID to resume logging into an existing run    |
 
-For a full list of arguements, run `python src/llm_fine_tune/train.py --help`.
+For a full list of arguments, run `python src/llm_fine_tune/train.py --help`.
 
 ## Evaluation
 Testing of the trained model can be performed on a held-out maze dataset. To generate the held-out maze datasets, the seed 1234 is used. For training, the seed [42](https://www.youtube.com/watch?v=aboZctrHfK8) is used.
@@ -145,6 +145,8 @@ python src/llm_fine_tune/evaluate.py \
   --model_path /path/to/base/model \
   --lora_path ./output/my_run/lora \
   --eval_size 100 \
+  --min_rows 5 --max_rows 7 \
+  --min_cols 5 --max_cols 7 \
   --verbose
 ```
 
@@ -157,4 +159,4 @@ Results are saved to `eval_results/eval_<timestamp>.json` and include:
 
 ## Hardware
 
-The project has been tested on Apple Silicon (MPS). CUDA *should* also be supported. Simply update the `DEVICE` environment variable. The model is loaded in `float16`.
+The project has been tested on Apple Silicon (MPS). CUDA support is untested but should work. Update the `DEVICE` environment variable accordingly. The model is loaded in `float16`.
