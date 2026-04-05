@@ -20,6 +20,7 @@ dev = [
     "gymnasium>=1.2.3",
     "ipywidgets>=8.1.8",
     "math-verify>=0.8.0",
+    "matplotlib>=3.10.8",
     "minigrid>=3.0.0",
     "mlx>=0.8.0",
     "mlx-lm>=0.29.1",
