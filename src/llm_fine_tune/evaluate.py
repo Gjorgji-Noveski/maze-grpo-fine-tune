@@ -12,8 +12,8 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
-from dataset import create_maze_dataset
-from src.utils.utils import extract_answer
+from llm_fine_tune.dataset import create_maze_dataset
+from llm_fine_tune.utils.utils import extract_answer
 
 
 def simulate_and_check(completion: str, metadata: dict) -> dict:

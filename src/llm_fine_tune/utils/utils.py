@@ -1,6 +1,6 @@
 import re
 
-from src.config import ANSWER_TAG
+from llm_fine_tune.utils.config import ANSWER_TAG
 
 
 def extract_answer(text: str) -> str:

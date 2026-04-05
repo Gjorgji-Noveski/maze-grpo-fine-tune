@@ -8,9 +8,9 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
 from peft import LoraConfig
-from dataset import create_maze_dataset
+from llm_fine_tune.dataset import create_maze_dataset
 
-from src.rewards import format_reward, got_to_end_reward, binary_got_closer
+from llm_fine_tune.rewards import format_reward, got_to_end_reward, binary_got_closer
 
 load_dotenv()
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
 
     checkpoint_path = args.resume_from_checkpoint
 
-    args.output_dir = os.path.join("../output", args.run_name)
+    args.output_dir = os.path.join("../../output", args.run_name)
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,

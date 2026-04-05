@@ -1,5 +1,5 @@
 import reasoning_gym
-from config import SYSTEM_PROMPT
+from llm_fine_tune.utils.config import SYSTEM_PROMPT
 
 
 def _clean_prompt(question):

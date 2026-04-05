@@ -1519,7 +1519,7 @@ wheels = [
 [[package]]
 name = "llm-fine-tune"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "datasets" },
     { name = "gguf" },
