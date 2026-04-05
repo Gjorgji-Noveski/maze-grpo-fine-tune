@@ -16,6 +16,7 @@ dependencies = [
     "numpy>=2.4.0",
     "ollama>=0.6.1",
     "peft>=0.18.0",
+    "python-dotenv>=1.2.2",
     "reasoning-gym>=0.1.24",
     "rich>=14.2.0",
     "textdistance>=4.6.3",
