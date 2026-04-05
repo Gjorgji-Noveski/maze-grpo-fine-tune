@@ -33,14 +33,14 @@ def parse_args():
     train_group.add_argument("--max_steps", type=int, default=20)
     train_group.add_argument("--num_generations", type=int, default=8, help="Completions per prompt for GRPO")
     train_group.add_argument("--generation_batch_size", type=int, default=8, help="Completions per forward pass (must be divisible by num_generations)")
-    train_group.add_argument("--max_completion_length", type=int, default=512, help="Max tokens for generation (increased for scratchpad reasoning)")
+    train_group.add_argument("--max_completion_length", type=int, default=512, help="Max tokens for generation")
     train_group.add_argument("--batch_size", type=int, default=2, help="Per device train batch size")
     train_group.add_argument("--gradient_accumulation_steps", type=int, default=4)
-    train_group.add_argument("--logging_steps", type=int, default=10)
+    train_group.add_argument("--logging_steps", type=int, default=10, help="Log metrics every X updates steps")
     train_group.add_argument("--save_steps", type=int, default=20, help="Save checkpoint every N steps")
     train_group.add_argument("--resume_from_checkpoint", type=str, default=None, help="Path to checkpoint directory to resume from")
     train_group.add_argument("--learning_rate", type=float, default=5e-5)
-    train_group.add_argument("--beta", type=float, default=0.0, help="KL divergence coefficient (0=no ref model)")
+    train_group.add_argument("--beta", type=float, default=0.0, help="KL divergence coefficient (0=no second reference model)")
     train_group.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature for diverse completions")
     train_group.add_argument(
         "--repetition_penalty",
@@ -61,10 +61,10 @@ def parse_args():
     other_group.add_argument("--run_name", type=str, default="default_run_name", help="Wandb run name")
     other_group.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
     other_group.add_argument("--group_name", type=str, help="Name of the group in wandb")
-    other_group.add_argument("--wandb_run_id", type=str, default=None, help="Wandb run ID to resume (find in wandb URL or run overview)")
+    other_group.add_argument("--wandb_run_id", type=str, default=None, help="Wandb run ID to resume (find this in the WANDB URL when you open a run or run overview in the WANDB online dashboard)")
     other_group.add_argument("--full_fine_tune", action="store_true",  help="If full fine tuning should be performed")
     other_group.add_argument("--reward_set", type=int, default=1, choices=[1, 2, 3],
-                             help="Reward function set: 1=[got_to_end], 2=[got_to_end, format], 3=[got_to_end, format, binary_got_closer]")
+                             help="Reward function set. Example: 1=[got_to_end], 2=[got_to_end, format], 3=[got_to_end, format, binary_got_closer]")
 
     return parser.parse_args()
 

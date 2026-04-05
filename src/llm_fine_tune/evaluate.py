@@ -260,6 +260,8 @@ if __name__ == "__main__":
     if args.lora_path:
         print(f"Loading LoRA adapter from {args.lora_path}...")
         model = PeftModel.from_pretrained(model, args.lora_path)
+    else:
+        print(f"Loading WITHOUT LoRA adapter...")
 
     model.eval()
     print(f"Model loaded. Device: {model.device}, dtype: {model.dtype}")
