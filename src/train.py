@@ -1,20 +1,18 @@
 import argparse
 import os
-import re
 import wandb
 
 from trl import GRPOTrainer, GRPOConfig
 from datasets import Dataset
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-
+from dotenv import load_dotenv
 from peft import LoraConfig
-from config import SYSTEM_PROMPT, THINK_TAG, ANSWER_TAG
 from dataset import create_maze_dataset
 
-from reward_functions.rewards import simulate_path, distance_reward, length_reward, no_answer_reward, format_reward, got_to_end_reward, binary_got_closer, validity_reward, diversity_reward
+from src.rewards import format_reward, got_to_end_reward, binary_got_closer
 
-DEFAULT_MODEL_PATH = "models/llama3.2_1B_instruct"
+load_dotenv()
 
 
 def parse_args():
@@ -58,7 +56,7 @@ def parse_args():
 
     # Other
     other_group = parser.add_argument_group("Other")
-    other_group.add_argument("--model_path", type=str, default=DEFAULT_MODEL_PATH)
+    other_group.add_argument("--model_path", type=str, default=os.getenv("DEFAULT_MODEL_PATH"), help="Path to local model directory")
     other_group.add_argument("--output_dir", type=str, default="./output")
     other_group.add_argument("--run_name", type=str, default=None, help="Wandb run name")
     other_group.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
@@ -128,7 +126,7 @@ if __name__ == "__main__":
 
     checkpoint_path = args.resume_from_checkpoint
 
-    args.output_dir = os.path.join("output", args.run_name)
+    args.output_dir = os.path.join("../output", args.run_name)
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,

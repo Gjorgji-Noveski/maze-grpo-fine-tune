@@ -13,7 +13,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
 from dataset import create_maze_dataset
-from reward_functions.utils import extract_answer
+from src.utils.utils import extract_answer
 
 
 def simulate_and_check(completion: str, metadata: dict) -> dict:

@@ -2,8 +2,8 @@ import re
 import random
 from collections import Counter
 
-from config import THINK_TAG, ANSWER_TAG
-from reward_functions.utils import extract_answer, get_completion_text, find_starting_and_goal_positions
+from src.config import THINK_TAG, ANSWER_TAG
+from src.utils.utils import extract_answer, get_completion_text, find_starting_and_goal_positions
 
 
 DIRECTIONS = {

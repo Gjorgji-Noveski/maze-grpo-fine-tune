@@ -1,6 +1,6 @@
 import re
 
-from config import ANSWER_TAG
+from src.config import ANSWER_TAG
 
 
 def extract_answer(text: str) -> str:
