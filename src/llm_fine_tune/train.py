@@ -4,7 +4,6 @@ import wandb
 
 from trl import GRPOTrainer, GRPOConfig
 from datasets import Dataset
-import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
 from peft import LoraConfig
@@ -96,6 +95,8 @@ if __name__ == "__main__":
             args.run_name = "_".join(f"{k}{v}" for k, v in sweep_config.items())
             wandb.run.name = args.run_name
     device = os.getenv("DEVICE")
+    checkpoint_path = args.resume_from_checkpoint
+    args.output_dir = os.path.join(args.output_dir, args.run_name)
 
     # Load tokenizer
     tok = AutoTokenizer.from_pretrained(args.model_path, use_fast=True)
@@ -123,10 +124,6 @@ if __name__ == "__main__":
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
         task_type="CAUSAL_LM"
     )
-
-    checkpoint_path = args.resume_from_checkpoint
-
-    args.output_dir = os.path.join(args.output_dir, args.run_name)
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,
