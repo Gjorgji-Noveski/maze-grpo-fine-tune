@@ -95,7 +95,7 @@ if __name__ == "__main__":
         if not args.run_name:
             args.run_name = "_".join(f"{k}{v}" for k, v in sweep_config.items())
             wandb.run.name = args.run_name
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    device = os.getenv("DEVICE")
 
     # Load tokenizer
     tok = AutoTokenizer.from_pretrained(args.model_path, use_fast=True)
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     )
     dataset = Dataset.from_list(maze_data)
     # Load model
-    model = AutoModelForCausalLM.from_pretrained(args.model_path, device_map='mps', dtype='float16')
+    model = AutoModelForCausalLM.from_pretrained(args.model_path, device_map=device, dtype='float16')
     print(f'Model device: {model.device}, dtype: {model.dtype}')
 
     # LoRA config
