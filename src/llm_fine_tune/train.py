@@ -58,7 +58,7 @@ def parse_args():
     other_group = parser.add_argument_group("Other")
     other_group.add_argument("--model_path", type=str, default=os.getenv("DEFAULT_MODEL_PATH"), help="Path to local model directory")
     other_group.add_argument("--output_dir", type=str, default="./output")
-    other_group.add_argument("--run_name", type=str, default="default_run_name", help="Wandb run name")
+    other_group.add_argument("--run_name", type=str, help="Wandb run name")
     other_group.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
     other_group.add_argument("--group_name", type=str, help="Name of the group in wandb")
     other_group.add_argument("--wandb_run_id", type=str, default=None, help="Wandb run ID to resume (find this in the WANDB URL when you open a run or run overview in the WANDB online dashboard)")
@@ -88,11 +88,11 @@ if __name__ == "__main__":
         )
         # Override args with sweep params if running under a wandb sweep
         sweep_config = dict(wandb.config)
-        if "learning_rate" in sweep_config:
-            args.learning_rate = sweep_config["learning_rate"]
-        if "reward_set" in sweep_config:
-            args.reward_set = int(sweep_config["reward_set"])
-        if not args.run_name:
+        for key, value in sweep_config.items():
+            if hasattr(args, key):
+                setattr(args, key, type(getattr(args, key))(value))
+        # Auto-name sweep runs based on swept params
+        if sweep_config:
             args.run_name = "_".join(f"{k}{v}" for k, v in sweep_config.items())
             wandb.run.name = args.run_name
     device = os.getenv("DEVICE")
@@ -162,11 +162,6 @@ if __name__ == "__main__":
         train_dataset=dataset,
         peft_config= None if args.full_fine_tune else lora_cfg
     )
-    # Override args with any sweep params automatically
-    if not args.no_wandb:
-        for key, value in wandb.config.items():
-            if hasattr(args, key):
-                setattr(args, key, type(getattr(args, key))(value))
     # Log config to wandb
     if not args.no_wandb:
         wandb.config.update(vars(args), allow_val_change=True)
