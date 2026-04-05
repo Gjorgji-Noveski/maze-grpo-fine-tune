@@ -87,7 +87,7 @@ The code supports two types of training:
 1. **With reward sets:** each set defines the combination of reward functions
 2. **With wandb sweeps:** a .yaml file is defined in `wandb_configs` which specify the hyperparameter search to explore. Reward set is one of the parameters. 2 .yaml config files are provided, one for training with a Lora adapter, and the other with performing a full model fine-tune
 
-### Reward set training
+### With reward sets
 An example command to initiate a single training run with a reward set:
 ```bash
 python src/llm_fine_tune/train.py --min_rows 3 --max_rows 3 --min_cols 3 --max_cols 3 --dataset_size 5000 --max_steps 500 --run_name example_run_name --group_name small_maze_sizes --temperature 0.6 --logging_steps 5 --save_steps 300 --learning_rate 1e-8 --max_completion_length 600 --num_generations 6 --generation_batch_size 6 --reward_set 3
@@ -103,7 +103,7 @@ Experiments have shown that starting off with fewer reward functions is easier t
 
 *If you wish to try out different combinations of reward functions, or wish to experiment with specific reward functions, feel free to change the code as you please.*
 
-### Wandb sweep training
+### With wandb sweeps
 
 To run a hyperparameter search (W&B sweep), first register the sweep with:
 
@@ -148,7 +148,7 @@ python src/llm_fine_tune/evaluate.py \
   --verbose
 ```
 
-`--lora_path` is optional — omit it to evaluate the base model without any adapter. When provided, it should point to a directory containing an `adapter_config.json` file, which is automatically created under `<output_dir>/lora` when performing a `train.py` run.
+`--lora_path` is optional, omit it to evaluate the base model without any adapter. When provided, it should point to a directory containing an `adapter_config.json` file, which is automatically created under `<output_dir>/lora` when performing a `train.py` run.
 
 Results are saved to `eval_results/eval_<timestamp>.json` and include:
 - Goal reach accuracy
