@@ -1,0 +1,146 @@
+# LLM Fine-Tune: Maze Navigation via GRPO
+
+## Overview
+
+This project fine-tunes an LLM to navigate a 2D grid maze from a start position (`*`) to a goal (`#`), avoiding walls (`X`). The entry point is `train.py`, invokable via CLI with configurable parameters. Training metrics are logged to [Weights and Biases](https://wandb.ai/site/). Training uses [TRL's GRPOTrainer](https://huggingface.co/docs/trl) with optional LoRA adapters (via [PEFT](https://huggingface.co/docs/peft/en/index)).
+
+## Project Structure
+
+```
+src/llm_fine_tune/
+├── train.py          # GRPO training entry point
+├── evaluate.py       # Evaluation on held-out mazes
+├── dataset.py        # Maze dataset creation and prompt formatting
+├── rewards.py        # Reward functions for GRPO
+└── utils/
+    ├── config.py     # System prompt and tag constants
+    └── utils.py      # Shared helpers (answer extraction, grid parsing)
+```
+
+## Setup
+Before running training, make sure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) installed, then create a virtual environment with `uv venv`.
+
+Then install the project dependencies:
+```bash
+uv sync
+```
+
+In this repo we have a .env:
+```
+DEFAULT_MODEL_PATH=/path/to/your/local/model
+DEVICE=mps  # mps | cuda | cpu (auto-detected if omitted, in this project mps was used)
+```
+
+Download a model into the `models` folder using the [HuggingFace CLI](https://huggingface.co/docs/huggingface_hub/en/guides/cli). You will need to have been granted model access on HuggingFace.
+
+```bash
+hf download meta-llama/Llama-3.2-1B-Instruct --local-dir models/
+```
+In this project, the Llama 3.2 1B Instruct model was used.
+
+### Training run metrics tracking
+We use Weights & Biases in this project because the training framework (TRL) integrates with it directly.
+To ensure metrics are logged during fine-tuning, set up a Weights & Biases account and run `wandb login` to authenticate and store your API key.
+
+## Reward Functions
+
+| Function            | Type                                        | Score                      | Purpose                                                                                                                            |
+|---------------------|---------------------------------------------|----------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `got_to_end_reward` | Binary                                      | +2 or 0                    | Did the path reach the goal? Foundation of every reward set.                                                                       |
+| `format_reward`     | Structured                                  | Up to +1.0 (+0.25 per tag) | Rewards correct `<think>`, `</think>`, `<answer>`, `</answer>` structure. Modified later to require *exactly one* of each.         |
+| `binary_got_closer` | Binary                                      | +0.5 or 0                  | Did the path end closer to the goal than the start? Soft nudge in the right direction (Manhattan distance)                         |
+| `distance_reward`   | Proportional version of `binary_got_closer` | Up to +3.0                 | `3.0 × (distance_improvement / initial_distance)` - more reward the closer you get.                                                |
+| `simulate_path`     | Granular                                    | Variable                   | Step-by-step simulation: +0.5 per valid step, −1.0 per wall hit, +10.0 for reaching goal, −2.0 per extra move after reaching goal. |
+| `length_reward`     | Binary                                      | +1 or 0                    | Does the number of directions outputted match the ground truth shortest path?                                                      |
+| `validity_reward`   | Proportional                                | Up to +3.0                 | Fraction of output tokens that are valid directions (`up`, `down`, `left`, `right`).                                               |
+| `no_answer_reward`  | Penalty                                     | −5.0                       | Fires when no answer is extractable at all.                                                                                        |
+| `diversity_reward`  | Regularizer                                 | Variable                   | Penalizes identical completions across a GRPO batch to maintain gradient signal.                                                   |
+
+
+Three reward sets are available via `--reward_set`:
+- `1`: `[got_to_end]`
+- `2`: `[got_to_end, format]`
+- `3`: `[got_to_end, format, binary_got_closer]` (default)
+
+*If you wish to try out different combinations of reward functions, please change the reward sets.*
+
+## Training
+An example command to initiate a single training run:
+```bash
+python src/llm_fine_tune/train.py
+ --min_rows 3
+ --max_rows 3
+ --min_cols 3
+ --max_cols 3
+ --dataset_size 5000
+ --max_steps 500
+ --run_name example_run_name
+ --group_name small_maze_sizes
+ --temperature 0.6
+ --logging_steps 5
+ --save_steps 300
+ --learning_rate 1e-8
+ --max_completion_length 600
+ --num_generations 6
+ --generation_batch_size 6
+```
+To run a hyperparameter search (W&B sweep), first register the sweep with:
+
+```bash
+wandb sweep wandb_configs/<sweep_name>.yaml
+```
+
+This will output a sweep ID along with the command needed to launch the sweep agent. For example:
+
+```bash
+wandb agent <user>/<project>/<sweep_id>
+```
+
+Currently, the sweep only supports the parameters defined in the sweep yaml files (`wandb_configs/sweep_lora.yaml`, `wandb_configs/sweep_full_fine_tune.yaml`). The sweepable parameters are `learning_rate`, `reward_set`, and `temperature`. Any other training arguments must be set as fixed values in the yaml `command` section.
+Feel free to modify the code if you wish to explore other parameters.
+
+
+Key arguments:
+
+| Argument | Default | Description |
+|---|---|---|
+| `--model_path` | `$DEFAULT_MODEL_PATH` | Path to base model |
+| `--dataset_size` | 10 | Number of training mazes |
+| `--max_steps` | 20 | Training steps |
+| `--reward_set` | 1 | Reward function set (1, 2, or 3) |
+| `--lora_r` | 8 | LoRA rank |
+| `--full_fine_tune` | false | Skip LoRA, fine-tune all weights |
+| `--no_wandb` | false | Disable W&B logging |
+| `--resume_from_checkpoint` | None | Path to checkpoint directory |
+| `--wandb_run_id` | None | W&B run ID to resume logging into |
+
+## Evaluation
+Testing of the trained model can be performed on a held-out maze dataset. To generate the held-out maze datasets, the seed `1234` is used. For training, the seed [42](https://www.youtube.com/watch?v=aboZctrHfK8) is used.
+
+*If you change the seed, ensure the training and evaluation seeds are different!*
+```bash
+python -m llm_fine_tune.evaluate \
+  --model_path /path/to/base/model \
+  --lora_path ./output/my_run/lora \
+  --eval_size 100 \
+  --verbose
+```
+
+Results are saved to `eval_results/eval_<timestamp>.json` and include:
+- Goal reach accuracy
+- Average final Manhattan distance to goal
+- Average valid steps and wall hits
+
+## Maze Format
+
+Mazes are generated by the input parameters you specify for training. [Reasoning gym](https://github.com/open-thought/reasoning-gym) is used for generating the mazes. The grid maze uses the following symbols:
+- `*` - start position
+- `#` - goal position
+- `X` - wall
+- `.` - open cell
+
+Infeasible mazes (no valid path) are filtered out before training and evaluation.
+
+## Hardware
+
+The project has been tested on Apple Silicon (MPS). CUDA *should* also be supported. Simply update the `DEVICE` environment variable. The model is loaded in `float16`.

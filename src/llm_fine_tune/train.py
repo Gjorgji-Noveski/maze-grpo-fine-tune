@@ -58,12 +58,12 @@ def parse_args():
     other_group = parser.add_argument_group("Other")
     other_group.add_argument("--model_path", type=str, default=os.getenv("DEFAULT_MODEL_PATH"), help="Path to local model directory")
     other_group.add_argument("--output_dir", type=str, default="./output")
-    other_group.add_argument("--run_name", type=str, default=None, help="Wandb run name")
+    other_group.add_argument("--run_name", type=str, default="default_run_name", help="Wandb run name")
     other_group.add_argument("--no_wandb", action="store_true", help="Disable wandb logging")
     other_group.add_argument("--group_name", type=str, help="Name of the group in wandb")
     other_group.add_argument("--wandb_run_id", type=str, default=None, help="Wandb run ID to resume (find in wandb URL or run overview)")
     other_group.add_argument("--full_fine_tune", action="store_true",  help="If full fine tuning should be performed")
-    other_group.add_argument("--reward_set", type=int, default=None, choices=[1, 2, 3],
+    other_group.add_argument("--reward_set", type=int, default=1, choices=[1, 2, 3],
                              help="Reward function set: 1=[got_to_end], 2=[got_to_end, format], 3=[got_to_end, format, binary_got_closer]")
 
     return parser.parse_args()
