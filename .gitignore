@@ -10,3 +10,7 @@ output
 
 .idea
 
+__pycache__/
+.DS_Store
+.env
+eval_results/

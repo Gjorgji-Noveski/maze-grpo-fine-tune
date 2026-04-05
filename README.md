@@ -135,7 +135,7 @@ Most noticeable arguments:
 For a full list of arguments, run `python src/llm_fine_tune/train.py --help`.
 
 ## Evaluation
-Testing of the trained model can be performed on a held-out maze dataset. To generate the held-out maze datasets, the seed 1234 is used. For training, the seed [42](https://www.youtube.com/watch?v=aboZctrHfK8) is used.
+Testing of the trained model can be performed on a held-out maze dataset. To generate the held-out maze datasets, the seed 12345 is used. For training, the seed [42](https://www.youtube.com/watch?v=aboZctrHfK8) is used.
 
 *If you change the seed, ensure the training and evaluation seeds are different!*
 
