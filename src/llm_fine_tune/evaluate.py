@@ -179,7 +179,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate maze-solving model")
 
     # Model
-    parser.add_argument("--model_path", type=str, default="models/llama3.2_1B_instruct",
+    parser.add_argument("--model_path", type=str, default=os.getenv("DEFAULT_MODEL_PATH"),
                         help="Base model path")
     parser.add_argument("--lora_path", type=str, default=None,
                         help="Path to LoRA adapter (optional)")
