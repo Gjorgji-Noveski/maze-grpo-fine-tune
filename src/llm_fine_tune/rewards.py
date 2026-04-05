@@ -6,6 +6,10 @@ from llm_fine_tune.utils.config import THINK_TAG, ANSWER_TAG
 from llm_fine_tune.utils.utils import extract_answer, get_completion_text, find_starting_and_goal_positions
 
 
+# Note on wall/boundary handling: The simulation intentionally does not block movement into walls
+# or out-of-bounds cells. The agent's position updates regardless, but the move is counted as a
+# wall hit and penalized. This means the agent can "phase through" walls — the reward signal
+# (negative penalties) is what teaches it to avoid invalid moves, rather than hard constraints.
 DIRECTIONS = {
     'up': (-1, 0),
     'down': (1, 0),
