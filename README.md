@@ -1,7 +1,7 @@
 <h1 align="center">LLM Fine-Tune: Maze Navigation via GRPO</h1>
 
 <p align="center">
-  <img src="maze.gif" alt="maze" /><br/>
+  <img src="assets/maze.gif" alt="maze" /><br/>
   Can an LLM learn to navigate a grid maze? This repo aims to do that!
 </p>
 
