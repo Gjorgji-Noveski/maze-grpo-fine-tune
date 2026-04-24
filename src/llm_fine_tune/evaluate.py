@@ -271,7 +271,7 @@ if __name__ == "__main__":
         output_path = Path(args.output_json)
         json_path = (
             output_path.parent
-            / f"eval_results/{output_path.stem}_{timestamp}{output_path.suffix}"
+            / f"eval_results/{output_path.stem}_{timestamp}.json"
         )
     else:
         json_path = f"eval_results/eval_{timestamp}.json"
