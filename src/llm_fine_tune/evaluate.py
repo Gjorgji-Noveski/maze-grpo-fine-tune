@@ -11,7 +11,9 @@ from tqdm import tqdm
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import PeftModel
+from peft import PeftModel, get_peft_model, LoraConfig
+import json
+from safetensors.torch import load_file
 from dotenv import load_dotenv
 
 from llm_fine_tune.dataset import create_maze_dataset
@@ -175,6 +177,56 @@ def save_results_json(metrics, args, original_size, filtered_size, results, outp
     print(f"\nResults saved to: {output_path}")
 
 
+def load_lora_adapter(model, lora_path):
+    """Load LoRA adapter, handling key format differences (e.g. from Prime Intellect).
+
+    Prime Intellect saves keys like: model.layers.0.mlp.down_proj.lora_A.weight
+    PEFT expects:  base_model.model.model.layers.0.mlp.down_proj.lora_A.default.weight
+
+    PeftModel.from_pretrained emits false "missing keys" warnings because it compares
+    against the full model state dict (base weights + lora), not just lora keys. Loading
+    via get_peft_model + load_state_dict avoids this and correctly loads the weights.
+    """
+    adapter_file = Path(lora_path) / "adapter_model.safetensors"
+    tensors = load_file(adapter_file)
+
+    sample_key = next(iter(tensors))
+    needs_remap = ".lora_A.weight" in sample_key or ".lora_B.weight" in sample_key
+
+    with open(Path(lora_path) / "adapter_config.json") as f:
+        adapter_cfg_raw = json.load(f)
+
+    lora_cfg = LoraConfig(
+        r=adapter_cfg_raw["r"],
+        lora_alpha=adapter_cfg_raw["lora_alpha"],
+        lora_dropout=adapter_cfg_raw.get("lora_dropout", 0.0),
+        target_modules=adapter_cfg_raw["target_modules"],
+        bias=adapter_cfg_raw.get("bias", "none"),
+        task_type=adapter_cfg_raw.get("task_type", "CAUSAL_LM"),
+    )
+    peft_model = get_peft_model(model, lora_cfg)
+
+    if needs_remap:
+        print("  Remapping LoRA keys (Prime Intellect format: missing 'default' adapter name prefix)...")
+        state_dict = {}
+        for k, v in tensors.items():
+            new_k = k.replace(".lora_A.weight", ".lora_A.default.weight")
+            new_k = new_k.replace(".lora_B.weight", ".lora_B.default.weight")
+            new_k = "base_model.model." + new_k
+            state_dict[new_k] = v
+    else:
+        state_dict = dict(tensors)
+
+    missing, unexpected = peft_model.load_state_dict(state_dict, strict=False)
+    lora_missing = [k for k in missing if "lora_" in k]
+    if lora_missing:
+        print(f"  WARNING: {len(lora_missing)} LoRA keys failed to load: {lora_missing[:3]}...")
+    else:
+        print(f"  LoRA weights loaded successfully ({len(state_dict)} keys).")
+
+    return peft_model
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate maze-solving model")
 
@@ -231,7 +283,7 @@ if __name__ == "__main__":
     # Load LoRA adapter if specified
     if args.lora_path:
         print(f"Loading LoRA adapter from {args.lora_path}...")
-        model = PeftModel.from_pretrained(model, args.lora_path)
+        model = load_lora_adapter(model, args.lora_path)
     else:
         print(f"Loading WITHOUT LoRA adapter...")
 
