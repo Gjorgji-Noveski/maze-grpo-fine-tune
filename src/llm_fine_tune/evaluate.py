@@ -51,8 +51,6 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
         if pred_dirs[i] == ground_truth_dirs[i].lower():
             correct_dirs += 1
 
-    # Use ground truth length as denominator (what percentage of the solution did we get right)
-    direction_accuracy = (correct_dirs / len(ground_truth_dirs) * 100) if ground_truth_dirs else 0.0
 
     return {
         'reached_goal': reached_goal,
@@ -62,7 +60,6 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
         'predicted_path': text,
         'ground_truth': ' '.join(ground_truth_dirs),
         'completion': completion,
-        'direction_accuracy': direction_accuracy,
     }
 
 
@@ -106,15 +103,11 @@ def print_results(results, verbose=False):
     avg_distance = sum(r['final_distance'] for r in results) / total if total > 0 else 0
     avg_valid_steps = sum(r['valid_steps'] for r in results) / total if total > 0 else 0
     avg_wall_hits = sum(r['wall_hits'] for r in results) / total if total > 0 else 0
-    # TODO: Remove or fix this, it takes the min(len) between predicted and ground truth when calculating
-    # TODO: this metric, for instance: pred: right right down, TRUTH: right right---> this would give 100% direction accuracy
-    # avg_direction_accuracy = sum(r['direction_accuracy'] for r in results) / total if total > 0 else 0
 
     print("\n" + "=" * 50)
     print("EVALUATION RESULTS")
     print("=" * 50)
     print(f"Accuracy (reached goal): {accuracy:.1f}% ({correct}/{total})")
-    # print(f"Avg direction accuracy: {avg_direction_accuracy:.1f}%")
     print(f"Avg final distance to goal: {avg_distance:.2f}")
     print(f"Avg valid steps: {avg_valid_steps:.2f}")
     print(f"Avg wall hits: {avg_wall_hits:.2f}")
@@ -131,7 +124,6 @@ def print_results(results, verbose=False):
 
     return {
         "accuracy": accuracy,
-        # 'avg_direction_accuracy': avg_direction_accuracy,
         "avg_distance": avg_distance,
         "avg_valid_steps": avg_valid_steps,
         "avg_wall_hits": avg_wall_hits,
