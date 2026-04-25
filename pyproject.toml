@@ -8,7 +8,7 @@ dependencies = [
     "numpy>=2.4.0",
     "peft>=0.18.0",
     "python-dotenv>=1.2.2",
-    "reasoning-gym>=0.1.24",
+    "reasoning-gym==0.1.25",
     "torch==2.9.1",
     "transformers>=4.57.3",
     "trl>=0.26.2",

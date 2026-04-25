@@ -1442,7 +1442,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.4.0" },
     { name = "peft", specifier = ">=0.18.0" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
-    { name = "reasoning-gym", specifier = ">=0.1.24" },
+    { name = "reasoning-gym", specifier = "==0.1.25" },
     { name = "torch", specifier = "==2.9.1" },
     { name = "transformers", specifier = ">=4.57.3" },
     { name = "trl", specifier = ">=0.26.2" },
@@ -2836,7 +2836,7 @@ wheels = [
 
 [[package]]
 name = "reasoning-gym"
-version = "0.1.24"
+version = "0.1.25"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "arckit" },
@@ -2851,9 +2851,9 @@ dependencies = [
     { name = "tabulate" },
     { name = "zss" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/64/c6/7e0cbf9f9e5203034bc824bf5f8e86ed81e4dda452e9d202f079bf8f77c3/reasoning_gym-0.1.24.tar.gz", hash = "sha256:94d7ae415ba702b9c5e81328c19a00c4711a98f11d10e3fcd7beba28a543ecff", size = 6786488, upload-time = "2025-09-29T07:25:45.667Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/7f/4023ce1f8f961ac1d9bf6c0b054c8c7dd4eceaaa8b064f53208306afe0ca/reasoning_gym-0.1.25.tar.gz", hash = "sha256:932247c760dd23e09fb14d013d29ec4c8804e62846bd50473f6915dc854adad2", size = 6789585, upload-time = "2026-03-28T13:32:30.481Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/54/c46c26072c01a08d562e588342cb56b940babad8141fe62f11b7f5b7ddce/reasoning_gym-0.1.24-py3-none-any.whl", hash = "sha256:b6520860b603c6c2cc86835147193a8e5cce2f100f02779cb1cf0b6ca940ca2f", size = 6982246, upload-time = "2025-09-29T07:25:42.288Z" },
+    { url = "https://files.pythonhosted.org/packages/42/21/bb9f6d2f76424f8b516fe83f8026e52e466b0202341bb4ee7a9861e06277/reasoning_gym-0.1.25-py3-none-any.whl", hash = "sha256:7f17a3eddb13c015d7d4a755ed576a061df889faf9468bcc2cca334ebe9e0435", size = 6985897, upload-time = "2026-03-28T13:32:25.367Z" },
 ]
 
 [[package]]
