@@ -4,10 +4,10 @@ import wandb
 
 from trl import GRPOTrainer, GRPOConfig
 from datasets import Dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
 from dotenv import load_dotenv
 from peft import LoraConfig
-from llm_fine_tune.dataset import create_maze_dataset
+from llm_fine_tune.dataset import load_maze_dataset
 
 from llm_fine_tune.rewards import format_reward, got_to_end_reward, binary_got_closer
 
@@ -17,18 +17,15 @@ load_dotenv()
 def parse_args():
     parser = argparse.ArgumentParser(description="GRPO training for maze navigation")
 
-    # Maze parameters
-    maze_group = parser.add_argument_group("Maze")
-    maze_group.add_argument("--min_rows", type=int, default=5)
-    maze_group.add_argument("--max_rows", type=int, default=7)
-    maze_group.add_argument("--min_cols", type=int, default=5)
-    maze_group.add_argument("--max_cols", type=int, default=7)
-    maze_group.add_argument("--p_blocked", type=float, default=0.3, help="Probability of blocked cells")
-    maze_group.add_argument("--dataset_size", type=int, default=10, help="Number of maze samples")
-    maze_group.add_argument("--seed", type=int, default=42)
+    # Data
+    data_group = parser.add_argument_group("Data")
+    data_group.add_argument("--data_path", type=str, required=True,
+                            help="Path to train.json produced by prepare_dataset.py")
 
     # Training parameters
     train_group = parser.add_argument_group("Training")
+    train_group.add_argument("--seed", type=int, default=42,
+                             help="Seed for training RNG (model init, batch order, GRPO sampling)")
     train_group.add_argument("--max_steps", type=int, default=20)
     train_group.add_argument("--num_generations", type=int, default=8, help="Completions per prompt for GRPO")
     train_group.add_argument("--generation_batch_size", type=int, default=8, help="Completions per forward pass (must be divisible by num_generations)")
@@ -94,6 +91,7 @@ if __name__ == "__main__":
         if sweep_config:
             args.run_name = "_".join(f"{k}{v}" for k, v in sweep_config.items())
             wandb.run.name = args.run_name
+    set_seed(args.seed)
     device = os.getenv("DEVICE")
     checkpoint_path = args.resume_from_checkpoint
     args.output_dir = os.path.join(args.output_dir, args.run_name)
@@ -101,16 +99,7 @@ if __name__ == "__main__":
     # Load tokenizer
     tok = AutoTokenizer.from_pretrained(args.model_path, use_fast=True)
     tok.pad_token = tok.eos_token
-    maze_data, _, _ = create_maze_dataset(
-        tokenizer=tok,
-        size=args.dataset_size,
-        min_rows=args.min_rows,
-        max_rows=args.max_rows,
-        min_cols=args.min_cols,
-        max_cols=args.max_cols,
-        p_blocked=args.p_blocked,
-        seed=args.seed
-    )
+    maze_data = load_maze_dataset(args.data_path, tok)
     dataset = Dataset.from_list(maze_data)
     # Load model
     model = AutoModelForCausalLM.from_pretrained(args.model_path, device_map=device, dtype='float16')

@@ -1,4 +1,5 @@
-import reasoning_gym
+import json
+
 from llm_fine_tune.utils.config import SYSTEM_PROMPT
 
 
@@ -24,30 +25,14 @@ def _apply_chat_template(tokenizer, content):
     )
 
 
-def create_maze_dataset(tokenizer, size, min_rows, max_rows, min_cols, max_cols, p_blocked, seed):
-    """Create a maze dataset, filtering infeasible entries and formatting prompts.
+def load_maze_dataset(path, tokenizer):
+    """Load a prepared maze dataset and apply the tokenizer's chat template.
 
-    Returns:
-        tuple: (filtered_dataset, original_size, filtered_size)
+    Reads the JSON produced by prepare_dataset.py and adds a 'prompt' field
+    to each entry. Returns the list of entries ready for training/eval.
     """
-    dataset = reasoning_gym.create_dataset(
-        "shortest_path",
-        min_rows=min_rows,
-        max_rows=max_rows,
-        min_cols=min_cols,
-        max_cols=max_cols,
-        p_blocked=p_blocked,
-        size=size,
-        seed=seed
-    )
-
-    original_size = len(dataset)
-
-    filtered = []
-    for entry in dataset:
-        if entry['answer'].lower() != 'infeasible':
-            clean_prompt = _clean_prompt(entry['question'])
-            entry['prompt'] = _apply_chat_template(tokenizer, clean_prompt)
-            filtered.append(entry)
-
-    return filtered, original_size, len(filtered)
+    with open(path) as f:
+        entries = json.load(f)
+    for entry in entries:
+        entry['prompt'] = _apply_chat_template(tokenizer, entry['question'])
+    return entries

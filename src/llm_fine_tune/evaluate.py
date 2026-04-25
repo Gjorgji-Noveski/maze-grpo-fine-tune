@@ -14,7 +14,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 from dotenv import load_dotenv
 
-from llm_fine_tune.dataset import create_maze_dataset
+from llm_fine_tune.dataset import load_maze_dataset
 from llm_fine_tune.rewards import _simulate_directions
 from llm_fine_tune.utils.utils import extract_answer, find_starting_and_goal_positions
 
@@ -63,8 +63,8 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
     }
 
 
-def evaluate(model, tokenizer, dataset, max_new_tokens, temperature, device):
-    """Run evaluation on dataset and return metrics."""
+def evaluate(model, tokenizer, dataset, max_new_tokens, device):
+    """Run evaluation on dataset and return metrics. Greedy decoding only."""
     results = []
 
     for entry in tqdm(dataset, desc="Evaluating"):
@@ -73,13 +73,12 @@ def evaluate(model, tokenizer, dataset, max_new_tokens, temperature, device):
         # Tokenize
         inputs = tokenizer(prompt, return_tensors="pt").to(device)
 
-        # Generate
+        # Generate (greedy)
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
-                temperature=temperature,
-                do_sample=temperature > 0,
+                do_sample=False,
                 pad_token_id=tokenizer.eos_token_id
             )
 
@@ -137,19 +136,13 @@ def calculate_results(results, verbose=False):
     }
 
 
-def save_results_json(metrics, args, original_size, filtered_size, results, output_path):
+def save_results_json(metrics, args, eval_size, results, output_path):
     """Save evaluation results to JSON file."""
     output = {
         'datetime': datetime.now().isoformat(),
         'dataset': {
-            'original_size': original_size,
-            'filtered_size': filtered_size,
-            'seed': args.seed,
-            'min_rows': args.min_rows,
-            'max_rows': args.max_rows,
-            'min_cols': args.min_cols,
-            'max_cols': args.max_cols,
-            'p_blocked': args.p_blocked,
+            'data_path': args.data_path,
+            'size': eval_size,
         },
         'model': {
             'model_path': args.model_path,
@@ -157,7 +150,7 @@ def save_results_json(metrics, args, original_size, filtered_size, results, outp
         },
         'generation': {
             'max_new_tokens': args.max_new_tokens,
-            'temperature': args.temperature,
+            'temperature': 0.0,
         },
         'metrics': metrics,
         'per_sample_results': results,
@@ -182,20 +175,11 @@ def parse_args():
                         help="Path to LoRA adapter (optional)")
 
     # Dataset
-    parser.add_argument("--eval_size", type=int, default=50,
-                        help="Number of evaluation samples")
-    parser.add_argument("--min_rows", type=int, default=5)
-    parser.add_argument("--max_rows", type=int, default=7)
-    parser.add_argument("--min_cols", type=int, default=5)
-    parser.add_argument("--max_cols", type=int, default=7)
-    parser.add_argument("--p_blocked", type=float, default=0.3)
-    parser.add_argument("--seed", type=int, default=12345,
-                        help="Seed for eval dataset (use different from training!)")
+    parser.add_argument("--data_path", type=str, required=True,
+                        help="Path to eval.json produced by prepare_dataset.py")
 
     # Generation
     parser.add_argument("--max_new_tokens", type=int, default=512)
-    parser.add_argument("--temperature", type=float, default=0.0,
-                        help="0 for greedy decoding")
 
     # Output
     parser.add_argument("--verbose", action="store_true",
@@ -235,26 +219,16 @@ if __name__ == "__main__":
     model.eval()
     print(f"Model loaded. Device: {model.device}, dtype: {model.dtype}")
 
-    # Create eval dataset
-    print(f"\nCreating eval dataset with seed={args.seed}, size={args.eval_size}...")
-    eval_dataset, original_size, filtered_size = create_maze_dataset(
-        tokenizer,
-        size=args.eval_size,
-        min_rows=args.min_rows,
-        max_rows=args.max_rows,
-        min_cols=args.min_cols,
-        max_cols=args.max_cols,
-        p_blocked=args.p_blocked,
-        seed=args.seed
-    )
-    print(f"Eval dataset size: {filtered_size} (filtered from {original_size})")
+    # Load eval dataset
+    print(f"\nLoading eval dataset from {args.data_path}...")
+    eval_dataset = load_maze_dataset(args.data_path, tokenizer)
+    print(f"Eval dataset size: {len(eval_dataset)}")
 
     # Run evaluation
     print("\nRunning evaluation...")
     results = evaluate(
         model, tokenizer, eval_dataset,
         max_new_tokens=args.max_new_tokens,
-        temperature=args.temperature,
         device=device
     )
 
@@ -273,4 +247,4 @@ if __name__ == "__main__":
     else:
         json_path = f"eval_results/eval_{timestamp}.json"
 
-    save_results_json(metrics, args, original_size, filtered_size, results, json_path)
+    save_results_json(metrics, args, len(eval_dataset), results, json_path)
