@@ -101,7 +101,12 @@ def print_results(results, verbose=False):
     accuracy = (correct / total) * 100 if total > 0 else 0
 
     avg_distance = sum(r['final_distance'] for r in results) / total if total > 0 else 0
-    avg_valid_steps = sum(r['valid_steps'] for r in results) / total if total > 0 else 0
+    correct_results = [r for r in results if r['reached_goal']]
+    avg_path_efficiency = (
+        sum(len(r['ground_truth'].split()) / r['valid_steps'] for r in correct_results)
+        / len(correct_results)
+        if correct_results else 0
+    )
     avg_wall_hits = sum(r['wall_hits'] for r in results) / total if total > 0 else 0
 
     print("\n" + "=" * 50)
@@ -109,7 +114,7 @@ def print_results(results, verbose=False):
     print("=" * 50)
     print(f"Accuracy (reached goal): {accuracy:.1f}% ({correct}/{total})")
     print(f"Avg final distance to goal: {avg_distance:.2f}")
-    print(f"Avg valid steps: {avg_valid_steps:.2f}")
+    print(f"Avg path efficiency (correct only): {avg_path_efficiency:.2f}")
     print(f"Avg wall hits: {avg_wall_hits:.2f}")
     print("=" * 50)
 
@@ -125,7 +130,7 @@ def print_results(results, verbose=False):
     return {
         "accuracy": accuracy,
         "avg_distance": avg_distance,
-        "avg_valid_steps": avg_valid_steps,
+        "avg_path_efficiency_correct_only": avg_path_efficiency,
         "avg_wall_hits": avg_wall_hits,
         "total": total,
         "correct": correct,
