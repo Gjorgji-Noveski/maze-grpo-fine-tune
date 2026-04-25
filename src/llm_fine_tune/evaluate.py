@@ -40,7 +40,7 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
     )
 
     reached_goal = (current_row == goal_row and current_col == goal_col)
-    final_distance = abs(current_row - goal_row) + abs(current_col - goal_col)
+    final_distance_to_goal = abs(current_row - goal_row) + abs(current_col - goal_col)
 
     # Calculate percentage of correct directions
     pred_dirs = text.lower().strip().split()
@@ -56,7 +56,7 @@ def simulate_and_check(completion: str, metadata: dict) -> dict:
         'reached_goal': reached_goal,
         'valid_steps': valid_steps,
         'wall_hits': wall_hits,
-        'final_distance': final_distance,
+        'final_distance_to_goal': final_distance_to_goal,
         'predicted_path': text,
         'ground_truth': ' '.join(ground_truth_dirs),
         'completion': completion,
@@ -94,13 +94,13 @@ def evaluate(model, tokenizer, dataset, max_new_tokens, temperature, device):
     return results
 
 
-def print_results(results, verbose=False):
+def calculate_results(results, verbose=False):
     """Print evaluation metrics."""
     total = len(results)
     correct = sum(1 for r in results if r['reached_goal'])
     accuracy = (correct / total) * 100 if total > 0 else 0
 
-    avg_distance = sum(r['final_distance'] for r in results) / total if total > 0 else 0
+    avg_distance_to_goal = sum(r['final_distance_to_goal'] for r in results) / total if total > 0 else 0
     correct_results = [r for r in results if r['reached_goal']]
     avg_path_efficiency = (
         sum(len(r['ground_truth'].split()) / r['valid_steps'] for r in correct_results)
@@ -113,7 +113,7 @@ def print_results(results, verbose=False):
     print("EVALUATION RESULTS")
     print("=" * 50)
     print(f"Accuracy (reached goal): {accuracy:.1f}% ({correct}/{total})")
-    print(f"Avg final distance to goal: {avg_distance:.2f}")
+    print(f"Avg final distance to goal: {avg_distance_to_goal:.2f}")
     print(f"Avg path efficiency (correct only): {avg_path_efficiency:.2f}")
     print(f"Avg wall hits: {avg_wall_hits:.2f}")
     print("=" * 50)
@@ -122,14 +122,14 @@ def print_results(results, verbose=False):
         print("\nDetailed results:")
         for i, r in enumerate(results):
             status = "+" if r['reached_goal'] else "x"
-            print(f"\n[{i+1}] {status} Distance: {r['final_distance']}, "
+            print(f"\n[{i+1}] {status} Distance: {r['final_distance_to_goal']}, "
                   f"Valid: {r['valid_steps']}, Walls: {r['wall_hits']}")
             print(f"    Predicted: {r['predicted_path']}")
             print(f"    Ground truth: {r['ground_truth']}")
 
     return {
         "accuracy": accuracy,
-        "avg_distance": avg_distance,
+        "avg_distance_to_goal": avg_distance_to_goal,
         "avg_path_efficiency_correct_only": avg_path_efficiency,
         "avg_wall_hits": avg_wall_hits,
         "total": total,
@@ -258,8 +258,8 @@ if __name__ == "__main__":
         device=device
     )
 
-    # Print results
-    metrics = print_results(results, verbose=args.verbose)
+    # Calculate results
+    metrics = calculate_results(results, verbose=args.verbose)
 
     # Save to JSON
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
